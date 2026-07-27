@@ -1,0 +1,334 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    min-height: 100vh;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #21262d;
+}
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #58a6ff;
+}
+.logo a {
+    color: #58a6ff;
+    text-decoration: none;
+}
+.nav-links a {
+    color: #c9d1d9;
+    text-decoration: none;
+    margin-left: 20px;
+    transition: color 0.3s;
+}
+.nav-links a:hover {
+    color: #58a6ff;
+}
+.hero {
+    text-align: center;
+    padding: 80px 0;
+}
+.hero h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+    color: #fff;
+}
+.highlight {
+    color: #58a6ff;
+}
+.hero p {
+    font-size: 20px;
+    color: #8b949e;
+    margin-bottom: 30px;
+}
+.btn-primary {
+    display: inline-block;
+    background: #238636;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.btn-primary:hover {
+    background: #2ea043;
+}
+.btn-delete {
+    background: #da3633;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+.btn-delete:hover {
+    background: #f85149;
+}
+.features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    padding: 60px 0;
+}
+.feature {
+    background: #161b22;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid #21262d;
+}
+.feature-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+.feature h3 {
+    color: #fff;
+    margin-bottom: 10px;
+}
+.code-example {
+    background: #161b22;
+    padding: 30px;
+    border-radius: 12px;
+    margin: 40px 0;
+    border: 1px solid #21262d;
+}
+.code-example pre {
+    background: #0d1117;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    color: #c9d1d9;
+}
+.create-form {
+    max-width: 600px;
+    margin: 40px auto;
+    background: #161b22;
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid #21262d;
+}
+.create-form h2 {
+    margin-bottom: 30px;
+    color: #fff;
+}
+.form-group {
+    margin-bottom: 20px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #c9d1d9;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    color: #c9d1d9;
+    font-family: monospace;
+}
+.form-group textarea {
+    font-size: 14px;
+    resize: vertical;
+}
+.result {
+    margin-top: 30px;
+    padding: 20px;
+    background: #238636;
+    border-radius: 8px;
+}
+.result.hidden {
+    display: none;
+}
+.url-box {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.url-box code {
+    flex: 1;
+    background: #0d1117;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+.url-box button {
+    background: #58a6ff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #0d1117;
+    font-weight: bold;
+}
+.remaining {
+    margin-top: 15px;
+    font-weight: bold;
+}
+.dashboard {
+    padding: 40px 0;
+}
+.dashboard h2 {
+    margin-bottom: 10px;
+    color: #fff;
+}
+.usage {
+    color: #8b949e;
+    margin-bottom: 30px;
+}
+.api-list .empty {
+    text-align: center;
+    padding: 60px;
+    background: #161b22;
+    border-radius: 12px;
+}
+.api-card {
+    background: #161b22;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #21262d;
+}
+.api-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+.method {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 12px;
+}
+.method.get { background: #238636; color: #fff; }
+.method.post { background: #1f6feb; color: #fff; }
+.method.put { background: #d29922; color: #fff; }
+.method.delete { background: #da3633; color: #fff; }
+.endpoint {
+    font-size: 18px;
+    color: #fff;
+    font-weight: bold;
+}
+.status-code {
+    color: #8b949e;
+}
+.api-url {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.api-url code {
+    flex: 1;
+    background: #0d1117;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    overflow-x: auto;
+}
+.api-url button {
+    background: #58a6ff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #0d1117;
+}
+@media (max-width: 768px) {
+    .features {
+        grid-template-columns: 1fr;
+    }
+    .hero h1 {
+        font-size: 32px;
+    }
+}
+.auth-alt {
+    text-align: center;
+    margin-top: 20px;
+    color: #8b949e;
+}
+.auth-alt a {
+    color: #58a6ff;
+    text-decoration: none;
+}
+.auth-alt a:hover {
+    text-decoration: underline;
+}
+.auth-form {
+    max-width: 400px;
+    margin: 40px auto;
+    background: #161b22;
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid #21262d;
+}
+.auth-form h2 {
+    margin-bottom: 24px;
+    color: #fff;
+}
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    color: #484f58;
+    font-size: 13px;
+}
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #21262d;
+}
+.auth-divider span {
+    padding: 0 12px;
+}
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 24px;
+    background: #fff;
+    color: #333;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.3s, box-shadow 0.3s;
+}
+.btn-google:hover {
+    background: #f7f8f8;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.error {
+    color: #f85149;
+    margin-bottom: 15px;
+}
+.success {
+    color: #3fb950;
+    margin-bottom: 15px;
+}

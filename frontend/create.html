@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Mock API</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo"><a href="/">MockAPI</a></div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/create">Create</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </nav>
+        <div class="create-form">
+            <h2>Create Mock API</h2>
+            <div class="form-group">
+                <label>Endpoint Path</label>
+                <input type="text" id="endpoint" placeholder="/users" value="/users">
+            </div>
+            <div class="form-group">
+                <label>HTTP Method</label>
+                <select id="method">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Response Body (JSON)</label>
+                <textarea id="response" rows="10">[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  {
+    "id": 2,
+    "name": "Jane Smith",
+    "email": "jane@example.com"
+  }
+]</textarea>
+            </div>
+            <div class="form-group">
+                <label>Status Code</label>
+                <select id="status_code">
+                    <option value="200">200 OK</option>
+                    <option value="201">201 Created</option>
+                    <option value="400">400 Bad Request</option>
+                    <option value="404">404 Not Found</option>
+                    <option value="500">500 Server Error</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="createApi()">Create API →</button>
+            <div id="result" class="result hidden">
+                <h3>API Created!</h3>
+                <p>Your API URL:</p>
+                <div class="url-box">
+                    <code id="api_url"></code>
+                    <button onclick="copyUrl()">Copy</button>
+                </div>
+                <div class="remaining">
+                    APIs remaining: <span id="remaining"></span>/5
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me', { credentials: 'include' });
+                if (!res.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (e) {
+                window.location.href = '/login';
+            }
+        }
+        checkAuth();
+
+        async function createApi() {
+            const data = {
+                endpoint: document.getElementById('endpoint').value,
+                method: document.getElementById('method').value,
+                response: document.getElementById('response').value,
+                status_code: parseInt(document.getElementById('status_code').value)
+            };
+            try {
+                const res = await fetch('/api/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
+                document.getElementById('api_url').textContent = result.url;
+                document.getElementById('result').classList.remove('hidden');
+                const listRes = await fetch('/api/list', { credentials: 'include' });
+                const listData = await listRes.json();
+                document.getElementById('remaining').textContent = 5 - listData.total;
+            } catch (err) {
+                alert('Error creating API');
+            }
+        }
+        function copyUrl() {
+            const url = document.getElementById('api_url').textContent;
+            navigator.clipboard.writeText(url);
+            alert('Copied!');
+        }
+    </script>
+</body>
+</html>

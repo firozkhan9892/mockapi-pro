@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MockAPI - Free Fake API Service</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo">MockAPI</div>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+            </div>
+        </nav>
+        <div class="hero">
+            <h1>Create Fake APIs in <span class="highlight">30 Seconds</span></h1>
+            <p>No backend needed. Test your frontend with realistic mock data. Secure with user authentication.</p>
+            <a href="/create" class="btn-primary">Start Free →</a>
+        </div>
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Instant Setup</h3>
+                <p>Create mock endpoints without any configuration</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <h3>User Auth</h3>
+                <p>Sign up, login, and secure your APIs with sessions</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💰</div>
+                <h3>100% Free</h3>
+                <p>5 mock APIs per user, unlimited requests</p>
+            </div>
+        </div>
+        <div class="code-example">
+            <h3>How it works:</h3>
+            <pre>
+# 1. Create your mock API
+POST /api/create
+{
+    "endpoint": "/users",
+    "method": "GET",
+    "response": [{"id": 1, "name": "John"}],
+    "status_code": 200
+}
+
+# 2. Use the URL
+GET /mock/{your_id}/users
+
+# 3. Get your response!
+[{id: 1, name: "John"}]
+            </pre>
+        </div>
+    </div>
+    <script>
+        async function updateNav() {
+            const nav = document.getElementById('nav-links');
+            try {
+                const res = await fetch('/api/me', { credentials: 'include' });
+                if (res.ok) {
+                    nav.innerHTML = `
+                        <a href="/">Home</a>
+                        <a href="/dashboard">Dashboard</a>
+                        <a href="/create">Create API</a>
+                        <a href="/logout">Logout</a>
+                    `;
+                } else {
+                    nav.innerHTML = `
+                        <a href="/">Home</a>
+                        <a href="/login">Login</a>
+                        <a href="/signup">Sign Up</a>
+                    `;
+                }
+            } catch (e) {
+                nav.innerHTML = `
+                    <a href="/">Home</a>
+                    <a href="/login">Login</a>
+                    <a href="/signup">Sign Up</a>
+                `;
+            }
+        }
+        updateNav();
+    </script>
+</body>
+</html>

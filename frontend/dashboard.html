@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - MockAPI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo"><a href="/">MockAPI</a></div>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+            </div>
+        </nav>
+        <div class="dashboard">
+            <h2>Your Mock APIs</h2>
+            <p class="usage">Used: <span id="used">0</span>/5 APIs</p>
+            <div id="api_list" class="api-list">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me', { credentials: 'include' });
+                const nav = document.getElementById('nav-links');
+                if (res.ok) {
+                    const data = await res.json();
+                    nav.innerHTML = `
+                        <a href="/">Home</a>
+                        <a href="/dashboard">Dashboard</a>
+                        <a href="/create">+ Create New</a>
+                        <a href="/logout">Logout</a>
+                    `;
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (e) {
+                window.location.href = '/login';
+            }
+        }
+        checkAuth();
+
+        async function loadApis() {
+            const res = await fetch('/api/list', { credentials: 'include' });
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+            const data = await res.json();
+            document.getElementById('used').textContent = data.total;
+            if (data.total === 0) {
+                document.getElementById('api_list').innerHTML = `
+                    <div class="empty">
+                        <p>No mock APIs yet!</p>
+                        <a href="/create" class="btn-primary">Create Your First API</a>
+                    </div>
+                `;
+                return;
+            }
+            let html = '';
+            data.apis.forEach(group => {
+                group.methods.forEach(api => {
+                    html += `
+                        <div class="api-card">
+                            <div class="api-info">
+                                <span class="method ${api.method.toLowerCase()}">${api.method}</span>
+                                <span class="endpoint">${group.endpoint}</span>
+                                <span class="status-code">${api.status_code}</span>
+                            </div>
+                            <div class="api-actions">
+                                <button onclick="deleteApi(${api.id})" class="btn-delete">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+            document.getElementById('api_list').innerHTML = html;
+        }
+        function copyUrl(url) {
+            navigator.clipboard.writeText(url);
+            alert('Copied!');
+        }
+        async function deleteApi(id) {
+            if (!confirm('Delete this API method?')) return;
+            await fetch('/api/delete/' + id, { method: 'DELETE', credentials: 'include' });
+            loadApis();
+        }
+        loadApis();
+    </script>
+</body>
+</html>
