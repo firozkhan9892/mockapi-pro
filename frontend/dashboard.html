@@ -14,25 +14,85 @@
                 <a href="/">Home</a>
             </div>
         </nav>
+
+        <div id="usage-banner" class="usage-banner hidden"></div>
+
         <div class="dashboard">
             <h2>Your Mock APIs</h2>
             <p class="usage">Used: <span id="used">0</span>/5 APIs</p>
             <div id="api_list" class="api-list">
                 <p>Loading...</p>
             </div>
+
+            <div class="section-divider"></div>
+
+            <div class="section-header">
+                <h2>API Keys</h2>
+                <button class="btn-primary" onclick="showCreateKey()">+ Create Key</button>
+            </div>
+            <div id="key_list" class="api-list">
+                <p>Loading...</p>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <h2>Usage Today</h2>
+            <div class="usage-card">
+                <div class="usage-row">
+                    <span class="usage-label">Today's Requests</span>
+                    <span class="usage-value"><span id="usage-today">0</span> / <span id="usage-limit">250</span></span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="usage-bar" style="width: 0%"></div>
+                </div>
+                <div class="usage-row">
+                    <span class="usage-label">Remaining Requests</span>
+                    <span class="usage-value" id="usage-remaining">250</span>
+                </div>
+            </div>
         </div>
     </div>
+
+    <div id="key-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="modal-title">New API Key</h3>
+            <p class="modal-warning">Copy this key now. It will not be shown again.</p>
+            <div class="key-display">
+                <code id="new-key-value"></code>
+                <button class="btn-copy" onclick="copyNewKey()">Copy</button>
+            </div>
+            <button class="btn-primary" onclick="closeModal()">Done</button>
+        </div>
+    </div>
+
+    <div id="create-key-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Create API Key</h3>
+            <div class="form-group">
+                <label>Name (optional)</label>
+                <input type="text" id="key-name" placeholder="e.g. production, staging">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeCreateModal()">Cancel</button>
+                <button class="btn-primary" onclick="createKey()">Create</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let newKeyValue = '';
+
         async function checkAuth() {
             try {
                 const res = await fetch('/api/me', { credentials: 'include' });
                 const nav = document.getElementById('nav-links');
                 if (res.ok) {
-                    const data = await res.json();
                     nav.innerHTML = `
                         <a href="/">Home</a>
+                        <a href="/pricing">Pricing</a>
+                        <a href="/docs">Docs</a>
                         <a href="/dashboard">Dashboard</a>
-                        <a href="/create">+ Create New</a>
+                        <a href="/create">Create API</a>
                         <a href="/logout">Logout</a>
                     `;
                 } else {
@@ -80,16 +140,144 @@
             });
             document.getElementById('api_list').innerHTML = html;
         }
-        function copyUrl(url) {
-            navigator.clipboard.writeText(url);
-            alert('Copied!');
-        }
+
         async function deleteApi(id) {
             if (!confirm('Delete this API method?')) return;
             await fetch('/api/delete/' + id, { method: 'DELETE', credentials: 'include' });
             loadApis();
         }
+
+        async function loadKeys() {
+            const res = await fetch('/api/keys', { credentials: 'include' });
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+            const data = await res.json();
+            if (data.total === 0) {
+                document.getElementById('key_list').innerHTML = `
+                    <div class="empty">
+                        <p>No API keys yet.</p>
+                    </div>
+                `;
+                return;
+            }
+            let html = '';
+            data.keys.forEach(key => {
+                const created = new Date(key.created_at).toLocaleDateString();
+                const lastUsed = key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never';
+                html += `
+                    <div class="api-card">
+                        <div class="key-info">
+                            <div class="key-main">
+                                <code class="key-preview">${key.key_preview}</code>
+                                ${key.name ? '<span class="key-name-tag">' + key.name + '</span>' : ''}
+                            </div>
+                            <div class="key-meta">
+                                <span>Created: ${created}</span>
+                                <span>Last used: ${lastUsed}</span>
+                            </div>
+                        </div>
+                        <div class="api-actions">
+                            <button onclick="regenerateKey('${key.id}')" class="btn-regen">Regenerate</button>
+                            <button onclick="deleteKey('${key.id}')" class="btn-delete">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('key_list').innerHTML = html;
+        }
+
+        function showCreateKey() {
+            document.getElementById('key-name').value = '';
+            document.getElementById('create-key-modal').classList.remove('hidden');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('create-key-modal').classList.add('hidden');
+        }
+
+        async function createKey() {
+            const name = document.getElementById('key-name').value.trim();
+            closeCreateModal();
+            const res = await fetch('/api/keys', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (data.success) {
+                newKeyValue = data.key;
+                document.getElementById('new-key-value').textContent = data.key;
+                document.getElementById('modal-title').textContent = 'New API Key';
+                document.getElementById('key-modal').classList.remove('hidden');
+                loadKeys();
+            }
+        }
+
+        async function deleteKey(id) {
+            if (!confirm('Delete this API key? This cannot be undone.')) return;
+            await fetch('/api/keys/' + id, { method: 'DELETE', credentials: 'include' });
+            loadKeys();
+        }
+
+        async function regenerateKey(id) {
+            if (!confirm('Regenerate this key? The old key will stop working immediately.')) return;
+            const res = await fetch('/api/keys/' + id + '/regenerate', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                newKeyValue = data.key;
+                document.getElementById('new-key-value').textContent = data.key;
+                document.getElementById('modal-title').textContent = 'Key Regenerated';
+                document.getElementById('key-modal').classList.remove('hidden');
+                loadKeys();
+            }
+        }
+
+        function copyNewKey() {
+            navigator.clipboard.writeText(newKeyValue);
+            const btn = document.querySelector('.btn-copy');
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
+
+        function closeModal() {
+            document.getElementById('key-modal').classList.add('hidden');
+        }
+
+        async function loadUsage() {
+            try {
+                const res = await fetch('/api/usage', { credentials: 'include' });
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('usage-today').textContent = data.today;
+                document.getElementById('usage-limit').textContent = data.limit;
+                document.getElementById('usage-remaining').textContent = data.remaining;
+                const pct = data.limit > 0 ? Math.min(100, (data.today / data.limit) * 100) : 0;
+                const bar = document.getElementById('usage-bar');
+                bar.style.width = pct + '%';
+                bar.className = 'progress-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
+
+                const banner = document.getElementById('usage-banner');
+                if (data.remaining <= 0) {
+                    banner.className = 'usage-banner danger';
+                    banner.innerHTML = '<strong>Daily limit reached.</strong> You have used all 250 requests today. <a href="/pricing">Upgrade to Pro</a> for 50,000 requests/day.';
+                } else if (data.remaining < 50) {
+                    banner.className = 'usage-banner warning';
+                    banner.innerHTML = '<strong>Warning:</strong> Only ' + data.remaining + ' requests remaining today. <a href="/pricing">Upgrade to Pro</a> for more.';
+                } else {
+                    banner.className = 'usage-banner hidden';
+                }
+            } catch (e) {}
+        }
+
         loadApis();
+        loadKeys();
+        loadUsage();
     </script>
 </body>
 </html>

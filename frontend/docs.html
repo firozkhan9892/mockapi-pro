@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - MockAPI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo"><a href="/">MockAPI</a></div>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/docs">Docs</a>
+                <a href="/login">Login</a>
+            </div>
+        </nav>
+
+        <div class="docs">
+            <aside class="docs-sidebar" id="docs-sidebar">
+                <h4>Contents</h4>
+                <a href="#quick-start" class="active">Quick Start</a>
+                <a href="#authentication">Authentication</a>
+                <a href="#create-mock">Create Mock API</a>
+                <a href="#examples">Request Examples</a>
+                <a href="#error-codes">Error Codes</a>
+                <a href="#faq">FAQ</a>
+            </aside>
+
+            <main class="docs-content">
+                <h1>MockAPI Documentation</h1>
+                <p class="docs-intro">Everything you need to create, manage, and consume mock APIs.</p>
+
+                <section id="quick-start">
+                    <h2>Quick Start</h2>
+                    <div class="docs-steps">
+                        <div class="docs-step">
+                            <span class="step-num">1</span>
+                            <div>
+                                <h4>Sign Up</h4>
+                                <p>Create a free account at <a href="/signup">mockapi.com/signup</a>.</p>
+                            </div>
+                        </div>
+                        <div class="docs-step">
+                            <span class="step-num">2</span>
+                            <div>
+                                <h4>Create an API Key</h4>
+                                <p>Go to Dashboard and create an API key. Copy it immediately.</p>
+                            </div>
+                        </div>
+                        <div class="docs-step">
+                            <span class="step-num">3</span>
+                            <div>
+                                <h4>Create a Mock Endpoint</h4>
+                                <p>Define your endpoint path, HTTP method, and JSON response body.</p>
+                            </div>
+                        </div>
+                        <div class="docs-step">
+                            <span class="step-num">4</span>
+                            <div>
+                                <h4>Make Requests</h4>
+                                <p>Use the mock URL with your API key in your application.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="authentication">
+                    <h2>Authentication</h2>
+                    <p>Every request to a mock endpoint requires an API key. You can pass it in two ways:</p>
+
+                    <h3>Header: x-api-key</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>HTTP</span>
+                            <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre>GET /mock/{user_id}/endpoint HTTP/1.1
+Host: mockapi.com
+x-api-key: mk_live_your_api_key_here</pre>
+                    </div>
+
+                    <h3>Header: Authorization Bearer</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>HTTP</span>
+                            <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre>GET /mock/{user_id}/endpoint HTTP/1.1
+Host: mockapi.com
+Authorization: Bearer mk_live_your_api_key_here</pre>
+                    </div>
+                </section>
+
+                <section id="create-mock">
+                    <h2>Create Mock API</h2>
+                    <p>Use this endpoint to create a new mock API. Requires session authentication (logged in via dashboard).</p>
+
+                    <div class="endpoint-box">
+                        <span class="method-badge post">POST</span>
+                        <code>/api/create</code>
+                    </div>
+
+                    <h4>Request Body</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>JSON</span>
+                            <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre>{
+    "endpoint": "/users",
+    "method": "GET",
+    "response": "[{\"id\": 1, \"name\": \"John\"}]",
+    "status_code": 200
+}</pre>
+                    </div>
+
+                    <h4>Response (200)</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>JSON</span>
+                            <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre>{
+    "success": true,
+    "api_id": 1,
+    "url": "http://mockapi.com/mock/{user_id}/users",
+    "method": "GET",
+    "status_code": 200
+}</pre>
+                    </div>
+                </section>
+
+                <section id="examples">
+                    <h2>Request Examples</h2>
+
+                    <div class="example-group">
+                        <h3><span class="method-badge get">GET</span> Fetch Mock Data</h3>
+
+                        <div class="example-tabs">
+                            <button class="tab active" onclick="switchTab(event, 'get-curl')">cURL</button>
+                            <button class="tab" onclick="switchTab(event, 'get-python')">Python</button>
+                            <button class="tab" onclick="switchTab(event, 'get-js')">JavaScript</button>
+                        </div>
+
+                        <div id="get-curl" class="example-panel active">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>cURL</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>curl -X GET "http://mockapi.com/mock/{user_id}/users" \
+  -H "x-api-key: mk_live_your_key_here"</pre>
+                            </div>
+                        </div>
+
+                        <div id="get-python" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>Python</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>import requests
+
+url = "http://mockapi.com/mock/{user_id}/users"
+headers = {"x-api-key": "mk_live_your_key_here"}
+
+response = requests.get(url, headers=headers)
+print(response.json())</pre>
+                            </div>
+                        </div>
+
+                        <div id="get-js" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>JavaScript</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>const response = await fetch(
+  "http://mockapi.com/mock/{user_id}/users",
+  {
+    headers: {
+      "x-api-key": "mk_live_your_key_here"
+    }
+  }
+);
+
+const data = await response.json();
+console.log(data);</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="example-group">
+                        <h3><span class="method-badge post">POST</span> Create Resource</h3>
+
+                        <div class="example-tabs">
+                            <button class="tab active" onclick="switchTab(event, 'post-curl')">cURL</button>
+                            <button class="tab" onclick="switchTab(event, 'post-python')">Python</button>
+                            <button class="tab" onclick="switchTab(event, 'post-js')">JavaScript</button>
+                        </div>
+
+                        <div id="post-curl" class="example-panel active">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>cURL</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>curl -X POST "http://mockapi.com/mock/{user_id}/users" \
+  -H "x-api-key: mk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice", "email": "alice@example.com"}'</pre>
+                            </div>
+                        </div>
+
+                        <div id="post-python" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>Python</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>import requests
+
+url = "http://mockapi.com/mock/{user_id}/users"
+headers = {
+    "x-api-key": "mk_live_your_key_here",
+    "Content-Type": "application/json"
+}
+payload = {"name": "Alice", "email": "alice@example.com"}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())</pre>
+                            </div>
+                        </div>
+
+                        <div id="post-js" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>JavaScript</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>const response = await fetch(
+  "http://mockapi.com/mock/{user_id}/users",
+  {
+    method: "POST",
+    headers: {
+      "x-api-key": "mk_live_your_key_here",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "Alice",
+      email: "alice@example.com"
+    })
+  }
+);
+
+const data = await response.json();
+console.log(data);</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="example-group">
+                        <h3><span class="method-badge put">PUT</span> Update Resource</h3>
+
+                        <div class="example-tabs">
+                            <button class="tab active" onclick="switchTab(event, 'put-curl')">cURL</button>
+                            <button class="tab" onclick="switchTab(event, 'put-python')">Python</button>
+                            <button class="tab" onclick="switchTab(event, 'put-js')">JavaScript</button>
+                        </div>
+
+                        <div id="put-curl" class="example-panel active">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>cURL</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>curl -X PUT "http://mockapi.com/mock/{user_id}/users/1" \
+  -H "x-api-key: mk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Updated", "email": "alice@new.com"}'</pre>
+                            </div>
+                        </div>
+
+                        <div id="put-python" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>Python</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>import requests
+
+url = "http://mockapi.com/mock/{user_id}/users/1"
+headers = {
+    "x-api-key": "mk_live_your_key_here",
+    "Content-Type": "application/json"
+}
+payload = {"name": "Alice Updated", "email": "alice@new.com"}
+
+response = requests.put(url, json=payload, headers=headers)
+print(response.json())</pre>
+                            </div>
+                        </div>
+
+                        <div id="put-js" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>JavaScript</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>const response = await fetch(
+  "http://mockapi.com/mock/{user_id}/users/1",
+  {
+    method: "PUT",
+    headers: {
+      "x-api-key": "mk_live_your_key_here",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "Alice Updated",
+      email: "alice@new.com"
+    })
+  }
+);
+
+const data = await response.json();
+console.log(data);</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="example-group">
+                        <h3><span class="method-badge delete">DELETE</span> Remove Resource</h3>
+
+                        <div class="example-tabs">
+                            <button class="tab active" onclick="switchTab(event, 'del-curl')">cURL</button>
+                            <button class="tab" onclick="switchTab(event, 'del-python')">Python</button>
+                            <button class="tab" onclick="switchTab(event, 'del-js')">JavaScript</button>
+                        </div>
+
+                        <div id="del-curl" class="example-panel active">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>cURL</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>curl -X DELETE "http://mockapi.com/mock/{user_id}/users/1" \
+  -H "x-api-key: mk_live_your_key_here"</pre>
+                            </div>
+                        </div>
+
+                        <div id="del-python" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>Python</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>import requests
+
+url = "http://mockapi.com/mock/{user_id}/users/1"
+headers = {"x-api-key": "mk_live_your_key_here"}
+
+response = requests.delete(url, headers=headers)
+print(response.json())</pre>
+                            </div>
+                        </div>
+
+                        <div id="del-js" class="example-panel">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>JavaScript</span>
+                                    <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre>const response = await fetch(
+  "http://mockapi.com/mock/{user_id}/users/1",
+  {
+    method: "DELETE",
+    headers: {
+      "x-api-key": "mk_live_your_key_here"
+    }
+  }
+);
+
+const data = await response.json();
+console.log(data);</pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="error-codes">
+                    <h2>Error Codes</h2>
+
+                    <div class="error-table">
+                        <div class="error-row header">
+                            <span class="error-code">Code</span>
+                            <span class="error-desc">Description</span>
+                        </div>
+                        <div class="error-row">
+                            <span class="error-code success">200</span>
+                            <span class="error-desc">Success. Request completed successfully.</span>
+                        </div>
+                        <div class="error-row">
+                            <span class="error-code danger">401</span>
+                            <span class="error-desc">Unauthorized. Missing or invalid API key.</span>
+                        </div>
+                        <div class="error-row">
+                            <span class="error-code danger">404</span>
+                            <span class="error-desc">Not Found. Mock endpoint does not exist for the given method.</span>
+                        </div>
+                        <div class="error-row">
+                            <span class="error-code warning">429</span>
+                            <span class="error-desc">Rate Limited. Daily request limit reached. Upgrade to Pro.</span>
+                        </div>
+                        <div class="error-row">
+                            <span class="error-code danger">500</span>
+                            <span class="error-desc">Server Error. Something went wrong on our end.</span>
+                        </div>
+                    </div>
+
+                    <h3>Error Response Format</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>JSON</span>
+                            <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre>{
+    "error": "Invalid API key"
+}</pre>
+                    </div>
+                </section>
+
+                <section id="faq">
+                    <h2>Frequently Asked Questions</h2>
+
+                    <div class="faq-list">
+                        <div class="faq-item">
+                            <h4>Where do I find my API key?</h4>
+                            <p>Go to your Dashboard. Click "+ Create Key" in the API Keys section. Copy the key immediately as it won't be shown again.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>What is the daily request limit?</h4>
+                            <p>Free plan: 250 requests/day. Pro plan: 50,000 requests/day. The limit resets at midnight UTC.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>Can I use both x-api-key and Bearer token?</h4>
+                            <p>Yes. Both methods are supported. Use whichever is more convenient for your setup.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>How many mock APIs can I create?</h4>
+                            <p>Free plan: 5 mock APIs. Pro plan: Unlimited. Each mock can have multiple HTTP methods on the same path.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>What happens if I hit 429?</h4>
+                            <p>Your request is rejected. Wait until midnight UTC for the limit to reset, or upgrade to Pro for higher limits.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>Is there a sandbox for testing?</h4>
+                            <p>Yes. The Free plan acts as a sandbox. Create mock APIs and test your frontend without any cost.</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        async function updateNav() {
+            const nav = document.getElementById('nav-links');
+            try {
+                const res = await fetch('/api/me', { credentials: 'include' });
+                if (res.ok) {
+                    nav.innerHTML = `
+                        <a href="/">Home</a>
+                        <a href="/pricing">Pricing</a>
+                        <a href="/docs">Docs</a>
+                        <a href="/dashboard">Dashboard</a>
+                        <a href="/create">Create API</a>
+                        <a href="/logout">Logout</a>
+                    `;
+                }
+            } catch (e) {}
+        }
+        updateNav();
+
+        function switchTab(e, id) {
+            const group = e.target.closest('.example-group');
+            group.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            group.querySelectorAll('.example-panel').forEach(p => p.classList.remove('active'));
+            e.target.classList.add('active');
+            document.getElementById(id).classList.add('active');
+        }
+
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.textContent);
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 2000);
+        }
+
+        // Sidebar active state on scroll
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const links = document.querySelectorAll('.docs-sidebar a');
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(s => {
+                if (window.scrollY >= s.offsetTop - 120) current = s.id;
+            });
+            links.forEach(a => {
+                a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+            });
+        });
+    </script>
+</body>
+</html>

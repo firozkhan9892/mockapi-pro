@@ -58,7 +58,9 @@ aid = r.json()["api_id"]
 url = r.json()["url"]
 r = s2.get(f"{BASE}/api/list")
 T("List", r.status_code == 200 and r.json().get("total", 0) >= 1)
-r = requests.get(url, timeout=3)
+kr = s2.post(f"{BASE}/api/keys", json={})
+ak = kr.json()["key"]
+r = requests.get(url, headers={"x-api-key": ak}, timeout=3)
 T("Mock hit", r.status_code == 200 and r.json().get("a") == 1)
 r = s2.delete(f"{BASE}/api/delete/{aid}")
 T("Delete", r.status_code == 200 and r.json().get("success"))

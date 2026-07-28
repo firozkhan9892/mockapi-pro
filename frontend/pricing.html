@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - MockAPI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo"><a href="/">MockAPI</a></div>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/docs">Docs</a>
+                <a href="/login">Login</a>
+            </div>
+        </nav>
+
+        <div class="pricing-page">
+            <h1>Simple, Transparent Pricing</h1>
+            <p class="pricing-subtitle">Start free. Upgrade when you need more.</p>
+
+            <div class="pricing-cards pricing-cards-full">
+                <div class="pricing-card">
+                    <h3>Free</h3>
+                    <div class="price">₹0<span>/month</span></div>
+                    <p class="plan-desc">Perfect for side projects and testing.</p>
+                    <ul>
+                        <li class="included">5 Mock APIs</li>
+                        <li class="included">250 Requests/day</li>
+                        <li class="included">1 API Key</li>
+                        <li class="included">RESTful methods (GET, POST, PUT, DELETE)</li>
+                        <li class="included">Basic support</li>
+                        <li class="excluded">Usage Analytics</li>
+                        <li class="excluded">Priority Support</li>
+                    </ul>
+                    <a href="/signup" class="btn-primary">Get Started Free</a>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="badge">Popular</div>
+                    <h3>Pro</h3>
+                    <div class="price">₹299<span>/month</span></div>
+                    <p class="plan-desc">For teams and production workloads.</p>
+                    <ul>
+                        <li class="included">Unlimited Mock APIs</li>
+                        <li class="included">50,000 Requests/day</li>
+                        <li class="included">Unlimited API Keys</li>
+                        <li class="included">RESTful methods (GET, POST, PUT, DELETE, PATCH)</li>
+                        <li class="included">Usage Analytics dashboard</li>
+                        <li class="included">Priority Support</li>
+                    </ul>
+                    <a href="/signup" class="btn-primary">Upgrade to Pro</a>
+                </div>
+            </div>
+
+            <section class="faq" style="margin-top: 60px;">
+                <h2 class="section-title">Pricing FAQ</h2>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <h4>Can I upgrade or downgrade anytime?</h4>
+                        <p>Yes. You can switch between Free and Pro at any time. Changes take effect immediately.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>What payment methods do you accept?</h4>
+                        <p>We accept UPI, credit/debit cards, and net banking. All payments are securely processed.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>Is there a free trial for Pro?</h4>
+                        <p>The Free plan is available indefinitely. Try it out and upgrade to Pro whenever you're ready.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>What happens when I exceed the daily limit?</h4>
+                        <p>On Free, you'll receive a 429 error after 250 requests. Upgrade to Pro for 50,000 requests/day.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">MockAPI</div>
+                    <p>Free API service for frontend developers.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/">Home</a>
+                    <a href="/pricing">Pricing</a>
+                    <a href="/login">Login</a>
+                    <a href="/signup">Sign Up</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 MockAPI. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        async function updateNav() {
+            const nav = document.getElementById('nav-links');
+            try {
+                const res = await fetch('/api/me', { credentials: 'include' });
+                if (res.ok) {
+                    nav.innerHTML = `
+                        <a href="/">Home</a>
+                        <a href="/pricing">Pricing</a>
+                        <a href="/docs">Docs</a>
+                        <a href="/dashboard">Dashboard</a>
+                        <a href="/create">Create API</a>
+                        <a href="/logout">Logout</a>
+                    `;
+                }
+            } catch (e) {}
+        }
+        updateNav();
+    </script>
+</body>
+</html>

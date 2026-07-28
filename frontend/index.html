@@ -3,41 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MockAPI - Free Fake API Service</title>
+    <title>MockAPI - Free Fake API Service for Frontend Developers</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <nav>
-            <div class="logo">MockAPI</div>
+            <div class="logo"><a href="/">MockAPI</a></div>
             <div class="nav-links" id="nav-links">
                 <a href="/">Home</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/docs">Docs</a>
+                <a href="/login">Login</a>
             </div>
         </nav>
-        <div class="hero">
-            <h1>Create Fake APIs in <span class="highlight">30 Seconds</span></h1>
-            <p>No backend needed. Test your frontend with realistic mock data. Secure with user authentication.</p>
-            <a href="/create" class="btn-primary">Start Free →</a>
-        </div>
-        <div class="features">
-            <div class="feature">
-                <div class="feature-icon">⚡</div>
-                <h3>Instant Setup</h3>
-                <p>Create mock endpoints without any configuration</p>
+
+        <section class="hero">
+            <h1>Create Mock APIs <span class="highlight">Instantly</span></h1>
+            <p>No backend needed. Test your frontend with realistic mock data. Secure with API keys and rate limiting.</p>
+            <div class="hero-actions">
+                <a href="/signup" class="btn-primary">Start Free</a>
+                <a href="#features" class="btn-secondary">Learn More</a>
             </div>
-            <div class="feature">
-                <div class="feature-icon">🔒</div>
-                <h3>User Auth</h3>
-                <p>Sign up, login, and secure your APIs with sessions</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">💰</div>
-                <h3>100% Free</h3>
-                <p>5 mock APIs per user, unlimited requests</p>
-            </div>
-        </div>
-        <div class="code-example">
-            <h3>How it works:</h3>
+        </section>
+
+        <section class="code-example">
+            <h3>Quick Start</h3>
             <pre>
 # 1. Create your mock API
 POST /api/create
@@ -48,14 +39,146 @@ POST /api/create
     "status_code": 200
 }
 
-# 2. Use the URL
+# 2. Use the URL with your API key
 GET /mock/{your_id}/users
+Header: x-api-key: mk_live_...
 
 # 3. Get your response!
-[{id: 1, name: "John"}]
-            </pre>
-        </div>
+[{"id": 1, "name": "John"}]</pre>
+        </section>
+
+        <section id="features">
+            <h2 class="section-title">Why MockAPI?</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant Setup</h3>
+                    <p>Create mock endpoints in seconds. No configuration, no servers, no hassle.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔐</div>
+                    <h3>API Key Security</h3>
+                    <p>Secure your endpoints with API keys. Each key gets its own usage tracking.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <h3>Usage Analytics</h3>
+                    <p>Track daily requests per key. Monitor usage with a real-time dashboard.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h3>RESTful Methods</h3>
+                    <p>Support for GET, POST, PUT, DELETE, and PATCH on every endpoint.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Custom Responses</h3>
+                    <p>Define your own JSON responses and status codes for each mock.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🆓</div>
+                    <h3>Generous Free Tier</h3>
+                    <p>5 mock APIs and 250 requests/day. No credit card required.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works">
+            <h2 class="section-title">How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <h3>Create an Account</h3>
+                    <p>Sign up with your email. No credit card needed.</p>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <h3>Create a Mock API</h3>
+                    <p>Define your endpoint, method, and JSON response in the dashboard.</p>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <h3>Connect Your Frontend</h3>
+                    <p>Use the provided URL with your API key. Start building immediately.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="pricing-preview" id="pricing">
+            <h2 class="section-title">Simple Pricing</h2>
+            <div class="pricing-cards">
+                <div class="pricing-card">
+                    <h3>Free</h3>
+                    <div class="price">₹0<span>/month</span></div>
+                    <ul>
+                        <li>5 Mock APIs</li>
+                        <li>250 Requests/day</li>
+                        <li>1 API Key</li>
+                        <li>Basic support</li>
+                    </ul>
+                    <a href="/signup" class="btn-primary">Get Started</a>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="badge">Popular</div>
+                    <h3>Pro</h3>
+                    <div class="price">₹299<span>/month</span></div>
+                    <ul>
+                        <li>Unlimited APIs</li>
+                        <li>50,000 Requests/day</li>
+                        <li>Unlimited API Keys</li>
+                        <li>Usage Analytics</li>
+                        <li>Priority Support</li>
+                    </ul>
+                    <a href="/signup" class="btn-primary">Upgrade to Pro</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="faq">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <h4>What is MockAPI?</h4>
+                    <p>MockAPI lets you create fake REST API endpoints for testing and development. Define your response JSON and use the URL in your frontend code.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Is it really free?</h4>
+                    <p>Yes. The free plan includes 5 mock APIs and 250 requests per day. No credit card required to sign up.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Do I need an API key?</h4>
+                    <p>Yes. Every request to a mock endpoint requires an API key passed via the x-api-key header or Authorization Bearer token.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>What happens when I hit the daily limit?</h4>
+                    <p>You'll receive a 429 response. You can upgrade to Pro for 50,000 requests/day, or wait for the limit to reset at midnight UTC.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Can I use MockAPI in production?</h4>
+                    <p>MockAPI is designed for development and testing. For production, use a real backend service.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">MockAPI</div>
+                    <p>Free API service for frontend developers.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/">Home</a>
+                    <a href="/pricing">Pricing</a>
+                    <a href="/login">Login</a>
+                    <a href="/signup">Sign Up</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 MockAPI. All rights reserved.</p>
+            </div>
+        </footer>
     </div>
+
     <script>
         async function updateNav() {
             const nav = document.getElementById('nav-links');
@@ -64,24 +187,14 @@ GET /mock/{your_id}/users
                 if (res.ok) {
                     nav.innerHTML = `
                         <a href="/">Home</a>
+                        <a href="/pricing">Pricing</a>
+                        <a href="/docs">Docs</a>
                         <a href="/dashboard">Dashboard</a>
                         <a href="/create">Create API</a>
                         <a href="/logout">Logout</a>
                     `;
-                } else {
-                    nav.innerHTML = `
-                        <a href="/">Home</a>
-                        <a href="/login">Login</a>
-                        <a href="/signup">Sign Up</a>
-                    `;
                 }
-            } catch (e) {
-                nav.innerHTML = `
-                    <a href="/">Home</a>
-                    <a href="/login">Login</a>
-                    <a href="/signup">Sign Up</a>
-                `;
-            }
+            } catch (e) {}
         }
         updateNav();
     </script>
