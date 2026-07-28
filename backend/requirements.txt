@@ -2,3 +2,5 @@ flask
 flask-cors
 authlib
 requests
+gunicorn
+python-dotenv

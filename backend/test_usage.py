@@ -1,5 +1,7 @@
 import requests, sys
+from pathlib import Path
 BASE = "http://127.0.0.1:5000"
+DB_PATH = Path(__file__).resolve().parent / "mockapi.db"
 p = f = 0
 def T(n, c):
     global p, f
@@ -71,7 +73,7 @@ T("Count increased by 2", after.get("today", 0) == before_count + 2)
 print("\n[6] Daily limit")
 # Manually set count to 250 in DB
 import sqlite3
-conn = sqlite3.connect("E:\\New folder\\AI agency tool kit\\New folder\\api key\\mockapi\\backend\\mockapi.db")
+conn = sqlite3.connect(DB_PATH, timeout=10)
 c = conn.cursor()
 c.execute("SELECT id FROM api_keys WHERE key_hash=?", (
     __import__('hashlib').sha256(api_key.encode()).hexdigest(),))
@@ -95,7 +97,7 @@ T("Remaining is 0", data.get("remaining") == 0)
 
 # [8] Daily reset
 print("\n[8] Daily reset")
-conn = sqlite3.connect("E:\\New folder\\AI agency tool kit\\New folder\\api key\\mockapi\\backend\\mockapi.db")
+conn = sqlite3.connect(DB_PATH, timeout=10)
 c = conn.cursor()
 c.execute("DELETE FROM request_usage WHERE api_key_id=? AND date=?", (kid, today))
 conn.commit()

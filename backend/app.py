@@ -9,7 +9,7 @@ import uuid
 import os
 import hashlib
 import secrets
-import time
+from pathlib import Path
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.secret_key = os.environ.get('SECRET_KEY', 'mockapi-secret-key-change-in-production')
@@ -24,10 +24,13 @@ oauth.register(
     client_kwargs={'scope': 'openid email profile'},
 )
 
-DB_NAME = 'mockapi.db'
+BASE_DIR = Path(__file__).resolve().parent
+DB_NAME = BASE_DIR / "mockapi.db"
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id TEXT PRIMARY KEY,
@@ -71,7 +74,7 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
             return jsonify({"error": "Unauthorized"}), 401
-        conn = sqlite3.connect(DB_NAME)
+        conn = sqlite3.connect(DB_NAME, timeout=10)
         c = conn.cursor()
         c.execute("SELECT id FROM users WHERE id=?", (session['user_id'],))
         user = c.fetchone()
@@ -88,14 +91,11 @@ def generate_api_key():
     key_prefix = raw[:16]
     return raw, key_hash, key_prefix
 
-def hash_api_key(raw_key):
-    return hashlib.sha256(raw_key.encode()).hexdigest()
-
 DAILY_LIMIT = 250
 
 def validate_api_key(api_key_raw):
     key_hash = hashlib.sha256(api_key_raw.encode()).hexdigest()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id, user_id FROM api_keys WHERE key_hash=?", (key_hash,))
     row = c.fetchone()
@@ -109,7 +109,7 @@ def get_today():
 
 def get_usage(api_key_id):
     today = get_today()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT request_count FROM request_usage WHERE api_key_id=? AND date=?",
               (api_key_id, today))
@@ -119,7 +119,7 @@ def get_usage(api_key_id):
 
 def increment_usage(api_key_id):
     today = get_today()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id, request_count FROM request_usage WHERE api_key_id=? AND date=?",
               (api_key_id, today))
@@ -149,7 +149,7 @@ def signup():
     user_id = str(uuid.uuid4())
     password_hash = generate_password_hash(password)
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     try:
         c.execute("INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)",
@@ -172,7 +172,7 @@ def login():
     if not email or not password:
         return jsonify({"error": "Email and password required"}), 400
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id, password_hash FROM users WHERE email=?", (email,))
     user = c.fetchone()
@@ -189,11 +189,16 @@ def logout():
     session.clear()
     return jsonify({"success": True})
 
+@app.route('/logout')
+def logout_page():
+    session.clear()
+    return redirect('/')
+
 @app.route('/api/keys', methods=['GET'])
 @login_required
 def list_api_keys():
     user_id = get_user_id()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id, key_prefix, name, created_at, last_used_at FROM api_keys WHERE user_id=? ORDER BY created_at DESC", (user_id,))
     rows = c.fetchall()
@@ -219,7 +224,7 @@ def create_api_key():
     raw, key_hash, key_prefix = generate_api_key()
     key_id = str(uuid.uuid4())
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name) VALUES (?, ?, ?, ?, ?)",
               (key_id, user_id, key_hash, key_prefix, name))
@@ -238,7 +243,7 @@ def create_api_key():
 @login_required
 def delete_api_key(key_id):
     user_id = get_user_id()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("DELETE FROM api_keys WHERE id=? AND user_id=?", (key_id, user_id))
     deleted = c.rowcount
@@ -252,7 +257,7 @@ def delete_api_key(key_id):
 @login_required
 def regenerate_api_key(key_id):
     user_id = get_user_id()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id FROM api_keys WHERE id=? AND user_id=?", (key_id, user_id))
     if not c.fetchone():
@@ -295,7 +300,7 @@ def login_google_callback():
     if not email:
         return redirect('/login')
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
 
     c.execute("SELECT id FROM users WHERE email=?", (email,))
@@ -321,7 +326,7 @@ def me():
     if not user_id:
         return jsonify({"error": "Not logged in"}), 401
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id, email, created_at FROM users WHERE id=?", (user_id,))
     user = c.fetchone()
@@ -373,7 +378,7 @@ def static_files(path):
 @login_required
 def create_mock_api():
     user_id = get_user_id()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM mock_apis WHERE user_id=?", (user_id,))
     count = c.fetchone()[0]
@@ -404,7 +409,7 @@ def create_mock_api():
 @login_required
 def list_apis():
     user_id = get_user_id()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id, endpoint, method, status_code, created_at FROM mock_apis WHERE user_id=? ORDER BY endpoint, method", (user_id,))
     apis = c.fetchall()
@@ -427,7 +432,7 @@ def list_apis():
 @login_required
 def delete_api(api_id):
     user_id = get_user_id()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("DELETE FROM mock_apis WHERE id=? AND user_id=?", (api_id, user_id))
     deleted = c.rowcount
@@ -442,7 +447,7 @@ def delete_api(api_id):
 def get_usage_summary():
     user_id = get_user_id()
     today = get_today()
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT id FROM api_keys WHERE user_id=?", (user_id,))
     key_ids = [row[0] for row in c.fetchall()]
@@ -475,7 +480,7 @@ def mock_response(user_id, endpoint):
 
     method = request.method
     endpoint = '/' + endpoint
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT response, status_code FROM mock_apis WHERE user_id=? AND endpoint=? AND method=?",
               (user_id, endpoint, method))
@@ -491,6 +496,8 @@ def mock_response(user_id, endpoint):
     conn.close()
     return jsonify(json.loads(result[0])), result[1]
 
+init_db()
+
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

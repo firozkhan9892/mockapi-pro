@@ -234,35 +234,6 @@ nav {
 .status-code {
     color: #8b949e;
 }
-.api-url {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-.api-url code {
-    flex: 1;
-    background: #0d1117;
-    padding: 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    overflow-x: auto;
-}
-.api-url button {
-    background: #58a6ff;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    color: #0d1117;
-}
-@media (max-width: 768px) {
-    .features {
-        grid-template-columns: 1fr;
-    }
-    .hero h1 {
-        font-size: 32px;
-    }
-}
 .auth-alt {
     text-align: center;
     margin-top: 20px;
