@@ -604,6 +604,9 @@ def mock_response(user_id, endpoint):
     if not key_id:
         return jsonify({"error": "Invalid API key"}), 401
 
+    if not is_user_active(key_owner):
+        return jsonify({"error": "Account disabled"}), 403
+
     if not is_admin_user(key_owner):
         # Get the daily limit for the key owner
         owner_limit = get_user_daily_limit(key_owner)
