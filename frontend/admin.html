@@ -628,6 +628,18 @@
             openModal('edit-user-modal');
         }
 
+        document.getElementById('edit-role').addEventListener('change', () => {
+            const role = document.getElementById('edit-role').value;
+            const limitInput = document.getElementById('edit-limit');
+            if (role === 'pro' || role === 'enterprise' || role === 'admin') {
+                limitInput.value = 'Unlimited';
+                limitInput.disabled = true;
+            } else {
+                if (limitInput.value === 'Unlimited') limitInput.value = '250';
+                limitInput.disabled = false;
+            }
+        });
+
         document.getElementById('save-user-btn').addEventListener('click', async () => {
             if (!editingUserId) return;
             const role = document.getElementById('edit-role').value;

@@ -104,7 +104,9 @@ def ensure_admin():
     conn.close()
 
 def get_user_daily_limit(user_id):
-    """Get the daily limit for a user from the database."""
+    """Get the daily limit for a user from the database.
+    0 means unlimited. Admin, Pro and Enterprise are always unlimited;
+    Free users use their configured daily_limit."""
     conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
     c.execute("SELECT daily_limit, role FROM users WHERE id=?", (user_id,))
@@ -114,9 +116,22 @@ def get_user_daily_limit(user_id):
         return 250  # default
     daily_limit = row[0]
     role = row[1]
-    if role == 'admin' or daily_limit is None or daily_limit == 0:
-        return 0  # 0 means unlimited
+    if role in ('admin', 'pro', 'enterprise'):
+        return 0  # unlimited
+    if daily_limit is None or daily_limit <= 0:
+        return 250  # free default
     return daily_limit
+
+def get_user_role(user_id):
+    """Get the role for a user from the database."""
+    if not user_id:
+        return 'free'
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE id=?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row else 'free'
 
 def get_current_user():
     user_id = get_user_id()
@@ -573,9 +588,10 @@ def delete_api(api_id):
 def get_usage_summary():
     user_id = get_user_id()
     daily_limit = get_user_daily_limit(user_id)
+    role = get_user_role(user_id)
 
     if daily_limit == 0:  # unlimited
-        return jsonify({"today": 0, "limit": "Unlimited", "remaining": "Unlimited", "is_admin": True})
+        return jsonify({"today": 0, "limit": "Unlimited", "remaining": "Unlimited", "is_admin": role == 'admin', "unlimited": True, "role": role})
 
     today = get_today()
     conn = sqlite3.connect(DB_NAME, timeout=10)
@@ -592,7 +608,7 @@ def get_usage_summary():
             total += row[0]
     conn.close()
     remaining = max(0, daily_limit - total)
-    return jsonify({"today": total, "limit": daily_limit, "remaining": remaining, "is_admin": False})
+    return jsonify({"today": total, "limit": daily_limit, "remaining": remaining, "is_admin": role == 'admin', "unlimited": False, "role": role})
 
 @app.route('/mock/<user_id>/<path:endpoint>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 def mock_response(user_id, endpoint):
@@ -813,7 +829,7 @@ def admin_get_user(user_id):
 
     today_requests = get_usage_for_user(user_id)
     lifetime_requests = get_lifetime_usage_for_user(user_id)
-    daily_limit = user[3]
+    daily_limit = get_user_daily_limit(user_id)
     remaining = "Unlimited" if daily_limit == 0 else max(0, daily_limit - today_requests)
 
     return jsonify({
@@ -863,9 +879,12 @@ def admin_update_user(user_id):
         params.append(role)
         updates.append("is_admin=?")
         params.append(1 if role == 'admin' else 0)
-        if role == 'admin':
+        if role in ('admin', 'pro', 'enterprise'):
             updates.append("daily_limit=?")
-            params.append(0)
+            params.append(0)  # unlimited
+        elif role == 'free' and 'daily_limit' not in data:
+            updates.append("daily_limit=?")
+            params.append(250)  # free default
 
     if 'daily_limit' in data:
         dl = data['daily_limit']

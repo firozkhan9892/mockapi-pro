@@ -39,7 +39,7 @@
             <h2>Usage Today</h2>
             <div class="usage-card">
                 <div id="usage-admin" class="admin-badge hidden">
-                    <strong>Admin Account</strong> - Unlimited Requests
+                    <strong id="usage-admin-title">Admin Account</strong> - Unlimited Requests
                     <p>No daily rate limit applies to this account.</p>
                 </div>
                 <div id="usage-normal" class="usage-normal">
@@ -264,7 +264,9 @@
                 if (!res.ok) return;
                 const data = await res.json();
 
-                if (data.is_admin) {
+                if (data.unlimited) {
+                    const label = data.is_admin ? 'Admin Account' : (data.role === 'enterprise' ? 'Enterprise Account' : 'Pro Account');
+                    document.getElementById('usage-admin-title').textContent = label + ' - Unlimited Requests';
                     document.getElementById('usage-admin').classList.remove('hidden');
                     document.getElementById('usage-normal').classList.add('hidden');
                     return;
