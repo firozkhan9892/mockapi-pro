@@ -38,16 +38,22 @@
 
             <h2>Usage Today</h2>
             <div class="usage-card">
-                <div class="usage-row">
-                    <span class="usage-label">Today's Requests</span>
-                    <span class="usage-value"><span id="usage-today">0</span> / <span id="usage-limit">250</span></span>
+                <div id="usage-admin" class="admin-badge hidden">
+                    <strong>Admin Account</strong> - Unlimited Requests
+                    <p>No daily rate limit applies to this account.</p>
                 </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="usage-bar" style="width: 0%"></div>
-                </div>
-                <div class="usage-row">
-                    <span class="usage-label">Remaining Requests</span>
-                    <span class="usage-value" id="usage-remaining">250</span>
+                <div id="usage-normal" class="usage-normal">
+                    <div class="usage-row">
+                        <span class="usage-label">Today's Requests</span>
+                        <span class="usage-value"><span id="usage-today">0</span> / <span id="usage-limit">250</span></span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="usage-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="usage-row">
+                        <span class="usage-label">Remaining Requests</span>
+                        <span class="usage-value" id="usage-remaining">250</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -87,12 +93,15 @@
                 const res = await fetch('/api/me', { credentials: 'include' });
                 const nav = document.getElementById('nav-links');
                 if (res.ok) {
+                    const me = await res.json();
+                    const adminLink = (me.role === 'admin' || me.is_admin) ? '<a href="/admin">Admin</a>' : '';
                     nav.innerHTML = `
                         <a href="/">Home</a>
                         <a href="/pricing">Pricing</a>
                         <a href="/docs">Docs</a>
                         <a href="/dashboard">Dashboard</a>
                         <a href="/create">Create API</a>
+                        ${adminLink}
                         <a href="/logout">Logout</a>
                     `;
                 } else {
@@ -254,6 +263,15 @@
                 const res = await fetch('/api/usage', { credentials: 'include' });
                 if (!res.ok) return;
                 const data = await res.json();
+
+                if (data.is_admin) {
+                    document.getElementById('usage-admin').classList.remove('hidden');
+                    document.getElementById('usage-normal').classList.add('hidden');
+                    return;
+                }
+
+                document.getElementById('usage-admin').classList.add('hidden');
+                document.getElementById('usage-normal').classList.remove('hidden');
                 document.getElementById('usage-today').textContent = data.today;
                 document.getElementById('usage-limit').textContent = data.limit;
                 document.getElementById('usage-remaining').textContent = data.remaining;

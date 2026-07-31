@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - MockAPI Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-x: hidden; }
+        .admin-layout {
+            display: flex;
+            min-height: calc(100vh - 80px);
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .admin-sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            background: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 12px;
+            padding: 16px;
+            align-self: flex-start;
+            position: sticky;
+            top: 20px;
+        }
+        .admin-sidebar h3 {
+            color: #fff;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #21262d;
+            font-size: 15px;
+        }
+        .admin-sidebar a {
+            display: block;
+            color: #c9d1d9;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .admin-sidebar a:hover {
+            background: #21262d;
+            color: #fff;
+        }
+        .admin-sidebar a.active {
+            background: #1f6feb;
+            color: #fff;
+        }
+        .admin-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .admin-title {
+            color: #fff;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #58a6ff;
+            margin-bottom: 6px;
+        }
+        .stat-card .stat-label {
+            color: #8b949e;
+            font-size: 13px;
+        }
+        .admin-toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .admin-toolbar input[type="text"],
+        .admin-toolbar select {
+            padding: 10px 12px;
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            color: #c9d1d9;
+            font-size: 14px;
+        }
+        .admin-toolbar input[type="text"] { flex: 1; min-width: 200px; }
+        .admin-table-wrap {
+            background: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+        .admin-table th {
+            text-align: left;
+            padding: 12px 14px;
+            color: #8b949e;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #21262d;
+            white-space: nowrap;
+        }
+        .admin-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #21262d;
+            color: #c9d1d9;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+        .admin-table tr:last-child td { border-bottom: none; }
+        .admin-table tr:hover td { background: #1c2129; }
+        .role-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+        .role-free { background: #30363d; color: #c9d1d9; }
+        .role-pro { background: #1f6feb; color: #fff; }
+        .role-enterprise { background: #8250df; color: #fff; }
+        .role-admin { background: #238636; color: #fff; }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-active { background: #238636; color: #fff; }
+        .status-disabled { background: #da3633; color: #fff; }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+            margin: 2px;
+        }
+        .btn-sm-blue { background: #1f6feb; }
+        .btn-sm-blue:hover { background: #388bfd; }
+        .btn-sm-yellow { background: #d29922; }
+        .btn-sm-yellow:hover { background: #e3b341; }
+        .btn-sm-red { background: #da3633; }
+        .btn-sm-red:hover { background: #f85149; }
+        .btn-sm-green { background: #238636; }
+        .btn-sm-green:hover { background: #2ea043; }
+        .btn-sm-gray { background: #30363d; }
+        .btn-sm-gray:hover { background: #484f58; }
+        .action-group { display: flex; gap: 4px; flex-wrap: wrap; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            align-items: center;
+        }
+        .pagination button {
+            background: #161b22;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .pagination button:hover:not(:disabled) { background: #21262d; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination span { color: #8b949e; font-size: 14px; }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8b949e;
+        }
+        .edit-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .edit-form select,
+        .edit-form input {
+            padding: 8px 10px;
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-size: 13px;
+        }
+        .confirm-text { color: #f85149; font-weight: bold; }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .detail-item {
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .detail-item .label { color: #8b949e; font-size: 12px; margin-bottom: 4px; }
+        .detail-item .value { color: #fff; font-weight: bold; font-size: 16px; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #238636;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 8px;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { background: #da3633; }
+        .method-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .method-tag.get { background: #238636; }
+        .method-tag.post { background: #1f6feb; }
+        .method-tag.put { background: #d29922; }
+        .method-tag.delete { background: #da3633; }
+        .limit-input { width: 110px; }
+        @media (max-width: 768px) {
+            .admin-layout { flex-direction: column; }
+            .admin-sidebar { width: 100%; position: static; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo"><a href="/">MockAPI</a></div>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/admin">Admin</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </nav>
+
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <h3>Admin Panel</h3>
+                <a href="#" class="active" data-section="dashboard">Dashboard</a>
+                <a href="#" data-section="users">Users</a>
+                <a href="#" data-section="keys">API Keys</a>
+                <a href="#" data-section="apis">Mock APIs</a>
+            </aside>
+
+            <div class="admin-content">
+                <h1 class="admin-title" id="page-title">Admin Dashboard</h1>
+
+                <!-- Dashboard Section -->
+                <div id="section-dashboard">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-users">0</div>
+                            <div class="stat-label">Total Users</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-apis">0</div>
+                            <div class="stat-label">Total Mock APIs</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-keys">0</div>
+                            <div class="stat-label">Total API Keys</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-requests-today">0</div>
+                            <div class="stat-label">Requests Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-requests-lifetime">0</div>
+                            <div class="stat-label">Requests (Lifetime)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-admins">0</div>
+                            <div class="stat-label">Admin Users</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-active">0</div>
+                            <div class="stat-label">Active Users</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Section -->
+                <div id="section-users" class="hidden">
+                    <div class="admin-toolbar">
+                        <input type="text" id="user-search" placeholder="Search by email...">
+                        <select id="user-role-filter">
+                            <option value="">All Roles</option>
+                            <option value="free">Free</option>
+                            <option value="pro">Pro</option>
+                            <option value="enterprise">Enterprise</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <select id="user-status-filter">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="disabled">Disabled</option>
+                        </select>
+                        <button class="btn-primary" id="user-search-btn">Search</button>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Plan</th>
+                                    <th>Role</th>
+                                    <th>Daily Limit</th>
+                                    <th>Requests Today</th>
+                                    <th>API Keys</th>
+                                    <th>Mock APIs</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <tr><td colspan="10"><div class="empty-state">Loading...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="users-pagination"></div>
+                </div>
+
+                <!-- API Keys Section -->
+                <div id="section-keys" class="hidden">
+                    <div class="admin-toolbar">
+                        <button class="btn-primary" id="refresh-keys-btn">Refresh</button>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Key Preview</th>
+                                    <th>Name</th>
+                                    <th>Created At</th>
+                                    <th>Last Used</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="keys-table-body">
+                                <tr><td colspan="6"><div class="empty-state">Loading...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Mock APIs Section -->
+                <div id="section-apis" class="hidden">
+                    <div class="admin-toolbar">
+                        <button class="btn-primary" id="refresh-apis-btn">Refresh</button>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Endpoint</th>
+                                    <th>Method</th>
+                                    <th>Status Code</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="apis-table-body">
+                                <tr><td colspan="6"><div class="empty-state">Loading...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View User Modal -->
+    <div id="view-user-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="view-user-title">User Details</h3>
+            <div id="view-user-details"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('view-user-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="edit-user-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Edit User</h3>
+            <div class="form-group">
+                <label>Plan / Role</label>
+                <select id="edit-role">
+                    <option value="free">Free</option>
+                    <option value="pro">Pro</option>
+                    <option value="enterprise">Enterprise</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Daily Request Limit</label>
+                <input type="text" id="edit-limit" placeholder="250, 1000, 5000, 10000 or Unlimited">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('edit-user-modal')">Cancel</button>
+                <button class="btn-primary" id="save-user-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="confirm-title">Confirm Action</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('confirm-modal')">Cancel</button>
+                <button class="btn-delete" id="confirm-ok-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let currentUsersPage = 1;
+        let editingUserId = null;
+        let pendingAction = null;
+
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => t.className = 'toast', 3000);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function esc(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function fetchJSON(url, options) {
+            const res = await fetch(url, { credentials: 'include', ...options });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+            return data;
+        }
+
+        // ---------- Navigation ----------
+        function showSection(section) {
+            ['dashboard', 'users', 'keys', 'apis'].forEach(s => {
+                document.getElementById('section-' + s).classList.add('hidden');
+            });
+            document.getElementById('section-' + section).classList.remove('hidden');
+            document.querySelectorAll('.admin-sidebar a').forEach(a => {
+                a.classList.toggle('active', a.dataset.section === section);
+            });
+            const titles = {
+                dashboard: 'Admin Dashboard',
+                users: 'User Management',
+                keys: 'API Keys',
+                apis: 'Mock APIs'
+            };
+            document.getElementById('page-title').textContent = titles[section];
+            if (section === 'dashboard') loadDashboard();
+            if (section === 'users') loadUsers(1);
+            if (section === 'keys') loadKeys();
+            if (section === 'apis') loadApis();
+        }
+
+        document.querySelectorAll('.admin-sidebar a').forEach(a => {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                showSection(a.dataset.section);
+            });
+        });
+
+        // ---------- Dashboard ----------
+        async function loadDashboard() {
+            try {
+                const data = await fetchJSON('/admin/dashboard');
+                document.getElementById('stat-users').textContent = data.total_users;
+                document.getElementById('stat-apis').textContent = data.total_mock_apis;
+                document.getElementById('stat-keys').textContent = data.total_api_keys;
+                document.getElementById('stat-requests-today').textContent = data.requests_today;
+                document.getElementById('stat-requests-lifetime').textContent = data.requests_lifetime;
+                document.getElementById('stat-admins').textContent = data.admin_users;
+                document.getElementById('stat-active').textContent = data.active_users;
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        // ---------- Users ----------
+        function renderUsers(users) {
+            const tbody = document.getElementById('users-table-body');
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">No users found</div></td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${esc(u.email)}</td>
+                    <td><span class="role-badge role-${esc(u.role)}">${esc(u.role)}</span></td>
+                    <td>${esc(u.role === 'admin' ? 'Admin' : 'Member')}</td>
+                    <td>${u.daily_limit === 0 ? 'Unlimited' : esc(u.daily_limit)}</td>
+                    <td>${esc(u.requests_today)}</td>
+                    <td>${esc(u.api_keys)}</td>
+                    <td>${esc(u.mock_apis)}</td>
+                    <td>${u.is_active ? '<span class="status-badge status-active">Active</span>' : '<span class="status-badge status-disabled">Disabled</span>'}</td>
+                    <td>${esc(u.created_at)}</td>
+                    <td>
+                        <div class="action-group">
+                            <button class="btn-sm btn-sm-blue" onclick="viewUser('${u.id}')">View</button>
+                            <button class="btn-sm btn-sm-yellow" onclick="editUser('${u.id}')">Edit</button>
+                            ${u.is_active
+                                ? '<button class="btn-sm btn-sm-gray" onclick="toggleDisableUser(\'' + u.id + '\', false)">Disable</button>'
+                                : '<button class="btn-sm btn-sm-green" onclick="toggleDisableUser(\'' + u.id + '\', true)">Enable</button>'}
+                            <button class="btn-sm btn-sm-red" onclick="confirmDeleteUser('${u.id}', '${esc(u.email)}')">Delete</button>
+                            ${u.role !== 'admin'
+                                ? '<button class="btn-sm btn-sm-green" onclick="promoteUser(\'' + u.id + '\')">Promote</button>'
+                                : '<button class="btn-sm btn-sm-gray" onclick="demoteUser(\'' + u.id + '\')">Demote</button>'}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadUsers(page) {
+            currentUsersPage = page;
+            const search = document.getElementById('user-search').value;
+            const role = document.getElementById('user-role-filter').value;
+            const status = document.getElementById('user-status-filter').value;
+            const params = new URLSearchParams({ page, per_page: 20 });
+            if (search) params.set('search', search);
+            if (role) params.set('role', role);
+            if (status) params.set('status', status);
+
+            try {
+                const data = await fetchJSON('/admin/users?' + params);
+                renderUsers(data.users);
+                const totalPages = Math.max(1, Math.ceil(data.total / data.per_page));
+                let pagHtml = '<button ' + (page <= 1 ? 'disabled' : '') + ' onclick="loadUsers(' + (page - 1) + ')">Prev</button>';
+                pagHtml += '<span>Page ' + page + ' of ' + totalPages + ' (' + data.total + ' users)</span>';
+                pagHtml += '<button ' + (page >= totalPages ? 'disabled' : '') + ' onclick="loadUsers(' + (page + 1) + ')">Next</button>';
+                document.getElementById('users-pagination').innerHTML = pagHtml;
+            } catch (e) {
+                document.getElementById('users-table-body').innerHTML =
+                    '<tr><td colspan="10"><div class="empty-state">' + esc(e.message) + '</div></td></tr>';
+            }
+        }
+
+        document.getElementById('user-search-btn').addEventListener('click', () => loadUsers(1));
+        document.getElementById('user-search').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') loadUsers(1);
+        });
+        document.getElementById('user-role-filter').addEventListener('change', () => loadUsers(1));
+        document.getElementById('user-status-filter').addEventListener('change', () => loadUsers(1));
+
+        async function viewUser(userId) {
+            try {
+                const data = await fetchJSON('/admin/users/' + userId);
+                const u = data;
+                document.getElementById('view-user-title').textContent = 'User: ' + u.email;
+                document.getElementById('view-user-details').innerHTML = `
+                    <div class="detail-grid">
+                        <div class="detail-item"><div class="label">Email</div><div class="value">${esc(u.email)}</div></div>
+                        <div class="detail-item"><div class="label">Role</div><div class="value">${esc(u.role)}</div></div>
+                        <div class="detail-item"><div class="label">Daily Limit</div><div class="value">${u.daily_limit === 0 ? 'Unlimited' : esc(u.daily_limit)}</div></div>
+                        <div class="detail-item"><div class="label">Status</div><div class="value">${u.is_active ? 'Active' : 'Disabled'}</div></div>
+                        <div class="detail-item"><div class="label">API Keys</div><div class="value">${esc(u.api_keys)}</div></div>
+                        <div class="detail-item"><div class="label">Mock APIs</div><div class="value">${esc(u.mock_apis)}</div></div>
+                        <div class="detail-item"><div class="label">Requests Today</div><div class="value">${esc(u.usage.today)}</div></div>
+                        <div class="detail-item"><div class="label">Lifetime Requests</div><div class="value">${esc(u.usage.lifetime)}</div></div>
+                        <div class="detail-item"><div class="label">Remaining</div><div class="value">${esc(u.usage.remaining)}</div></div>
+                        <div class="detail-item"><div class="label">Created At</div><div class="value">${esc(u.created_at)}</div></div>
+                    </div>`;
+                openModal('view-user-modal');
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        function editUser(userId) {
+            editingUserId = userId;
+            openModal('edit-user-modal');
+        }
+
+        document.getElementById('save-user-btn').addEventListener('click', async () => {
+            if (!editingUserId) return;
+            const role = document.getElementById('edit-role').value;
+            const limitRaw = document.getElementById('edit-limit').value.trim();
+            const body = {};
+            if (role) body.role = role;
+            if (limitRaw) body.daily_limit = limitRaw;
+            if (Object.keys(body).length === 0) { showToast('Nothing to update', true); return; }
+            try {
+                await fetchJSON('/admin/users/' + editingUserId, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                closeModal('edit-user-modal');
+                showToast('User updated');
+                loadUsers(currentUsersPage);
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        });
+
+        function toggleDisableUser(userId, enable) {
+            pendingAction = () => doDisableUser(userId, enable);
+            document.getElementById('confirm-title').textContent = enable ? 'Enable User' : 'Disable User';
+            document.getElementById('confirm-message').textContent = enable
+                ? 'This will re-enable this user account.'
+                : 'This will prevent this user from logging in and calling APIs.';
+            openModal('confirm-modal');
+        }
+
+        async function doDisableUser(userId, enable) {
+            try {
+                const url = enable ? '/admin/users/' + userId + '/enable' : '/admin/users/' + userId + '/disable';
+                await fetchJSON(url, { method: 'POST' });
+                showToast(enable ? 'User enabled' : 'User disabled');
+                closeModal('confirm-modal');
+                loadUsers(currentUsersPage);
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        function confirmDeleteUser(userId, email) {
+            pendingAction = () => doDeleteUser(userId);
+            document.getElementById('confirm-title').textContent = 'Delete User';
+            document.getElementById('confirm-message').innerHTML =
+                'Are you sure you want to delete <strong>' + esc(email) + '</strong>?<br><br>' +
+                '<span class="confirm-text">This will permanently remove their API keys, mock APIs, and usage records.</span>';
+            openModal('confirm-modal');
+        }
+
+        async function doDeleteUser(userId) {
+            try {
+                await fetchJSON('/admin/users/' + userId, { method: 'DELETE' });
+                showToast('User deleted');
+                closeModal('confirm-modal');
+                loadUsers(currentUsersPage);
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        function promoteUser(userId) {
+            pendingAction = () => doRoleChange(userId, 'admin');
+            document.getElementById('confirm-title').textContent = 'Promote to Admin';
+            document.getElementById('confirm-message').textContent = 'This will grant this user full admin access with unlimited requests.';
+            openModal('confirm-modal');
+        }
+
+        function demoteUser(userId) {
+            pendingAction = () => doRoleChange(userId, 'free');
+            document.getElementById('confirm-title').textContent = 'Demote User';
+            document.getElementById('confirm-message').textContent = 'This will remove admin access and apply the free plan (250/day).';
+            openModal('confirm-modal');
+        }
+
+        async function doRoleChange(userId, role) {
+            try {
+                await fetchJSON('/admin/users/' + userId, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role })
+                });
+                showToast('Role changed to ' + role);
+                closeModal('confirm-modal');
+                loadUsers(currentUsersPage);
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+            if (pendingAction) pendingAction();
+        });
+
+        // ---------- API Keys ----------
+        async function loadKeys() {
+            try {
+                const data = await fetchJSON('/admin/keys');
+                const tbody = document.getElementById('keys-table-body');
+                if (!data.keys || data.keys.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No API keys found</div></td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.keys.map(k => `
+                    <tr>
+                        <td>${esc(k.user_email)}</td>
+                        <td><code>${esc(k.key_preview)}</code></td>
+                        <td>${esc(k.name || '')}</td>
+                        <td>${esc(k.created_at)}</td>
+                        <td>${esc(k.last_used_at || 'Never')}</td>
+                        <td>
+                            <div class="action-group">
+                                <button class="btn-sm btn-sm-yellow" onclick="regenerateKey('${k.id}')">Regenerate</button>
+                                <button class="btn-sm btn-sm-red" onclick="confirmDeleteKey('${k.id}')">Revoke</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                document.getElementById('keys-table-body').innerHTML =
+                    '<tr><td colspan="6"><div class="empty-state">' + esc(e.message) + '</div></td></tr>';
+            }
+        }
+
+        document.getElementById('refresh-keys-btn').addEventListener('click', loadKeys);
+
+        function confirmDeleteKey(keyId) {
+            pendingAction = () => doDeleteKey(keyId);
+            document.getElementById('confirm-title').textContent = 'Revoke API Key';
+            document.getElementById('confirm-message').textContent = 'This API key will be permanently revoked. Any clients using it will lose access.';
+            openModal('confirm-modal');
+        }
+
+        async function doDeleteKey(keyId) {
+            try {
+                await fetchJSON('/admin/keys/' + keyId, { method: 'DELETE' });
+                showToast('API key revoked');
+                closeModal('confirm-modal');
+                loadKeys();
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        async function regenerateKey(keyId) {
+            pendingAction = () => doRegenerateKey(keyId);
+            document.getElementById('confirm-title').textContent = 'Regenerate API Key';
+            document.getElementById('confirm-message').textContent = 'This will invalidate the old key immediately.';
+            openModal('confirm-modal');
+        }
+
+        async function doRegenerateKey(keyId) {
+            try {
+                const data = await fetchJSON('/admin/keys/' + keyId + '/regenerate', { method: 'POST' });
+                showToast('Key regenerated: ' + data.key);
+                closeModal('confirm-modal');
+                loadKeys();
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        // ---------- Mock APIs ----------
+        async function loadApis() {
+            try {
+                const data = await fetchJSON('/admin/apis');
+                const tbody = document.getElementById('apis-table-body');
+                if (!data.apis || data.apis.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No mock APIs found</div></td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.apis.map(a => `
+                    <tr>
+                        <td>${esc(a.user_email)}</td>
+                        <td><code>${esc(a.endpoint)}</code></td>
+                        <td><span class="method-tag ${esc(a.method.toLowerCase())}">${esc(a.method)}</span></td>
+                        <td>${esc(a.status_code)}</td>
+                        <td>${esc(a.created_at)}</td>
+                        <td>
+                            <div class="action-group">
+                                <button class="btn-sm btn-sm-red" onclick="confirmDeleteApi(${a.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                document.getElementById('apis-table-body').innerHTML =
+                    '<tr><td colspan="6"><div class="empty-state">' + esc(e.message) + '</div></td></tr>';
+            }
+        }
+
+        document.getElementById('refresh-apis-btn').addEventListener('click', loadApis);
+
+        function confirmDeleteApi(apiId) {
+            pendingAction = () => doDeleteApi(apiId);
+            document.getElementById('confirm-title').textContent = 'Delete Mock API';
+            document.getElementById('confirm-message').textContent = 'This mock API endpoint will be permanently deleted.';
+            openModal('confirm-modal');
+        }
+
+        async function doDeleteApi(apiId) {
+            try {
+                await fetchJSON('/admin/apis/' + apiId, { method: 'DELETE' });
+                showToast('Mock API deleted');
+                closeModal('confirm-modal');
+                loadApis();
+            } catch (e) {
+                showToast(e.message, true);
+            }
+        }
+
+        // ---------- Init ----------
+        async function initAdmin() {
+            try {
+                const me = await fetchJSON('/api/me');
+                if (me.role !== 'admin' && me.is_admin !== true) {
+                    window.location.href = '/dashboard';
+                    return;
+                }
+            } catch (e) {
+                window.location.href = '/login';
+                return;
+            }
+            showSection('dashboard');
+        }
+
+        initAdmin();
+    </script>
+</body>
+</html>
