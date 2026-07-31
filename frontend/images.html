@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Manager - MockAPI</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #888;
+            margin-bottom: 24px;
+            transition: border-color 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+        .drop-zone.dragover {
+            border-color: #4a6cf7;
+            background: rgba(74, 108, 247, 0.06);
+            color: #4a6cf7;
+        }
+        .drop-zone input[type="file"] {
+            display: none;
+        }
+        .drop-zone p { margin: 6px 0; }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .image-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .image-thumb {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+            background: #f3f4f6;
+        }
+        .image-body {
+            padding: 12px;
+        }
+        .image-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .image-meta {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .image-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .image-actions .btn-sm {
+            flex: 1;
+        }
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 13px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-copy {
+            background: #eef2ff;
+            color: #4a6cf7;
+        }
+        .btn-copy:hover { background: #e0e7ff; }
+        .btn-sm-red {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn-sm-red:hover { background: #fecaca; }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #111827;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        .toast.show { opacity: 1; }
+        .toast.error { background: #dc2626; }
+        .empty { padding: 40px 20px; text-align: center; }
+        .image-loading { color: #888; padding: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo"><a href="/">MockAPI</a></div>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+            </div>
+        </nav>
+
+        <div class="dashboard">
+            <div class="section-header">
+                <h2>Image Manager</h2>
+                <button class="btn-primary" onclick="document.getElementById('file-input').click()">+ Upload Image</button>
+            </div>
+            <p class="usage">Upload jpg, jpeg, png, webp or gif. Max 10MB per image.</p>
+
+            <div class="drop-zone" id="drop-zone">
+                <p><strong>Drag &amp; drop</strong> an image here, or click to browse</p>
+                <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp,.gif">
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div id="image-list">
+                <div class="image-loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let uploadInProgress = false;
+
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => t.className = 'toast', 3000);
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function esc(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me', { credentials: 'include' });
+                const nav = document.getElementById('nav-links');
+                if (res.ok) {
+                    const me = await res.json();
+                    const adminLink = (me.role === 'admin' || me.is_admin) ? '<a href="/admin">Admin</a>' : '';
+                    nav.innerHTML = `
+                        <a href="/">Home</a>
+                        <a href="/pricing">Pricing</a>
+                        <a href="/docs">Docs</a>
+                        <a href="/dashboard">Dashboard</a>
+                        <a href="/create">Create API</a>
+                        <a href="/images" class="active">Images</a>
+                        ${adminLink}
+                        <a href="/logout">Logout</a>
+                    `;
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (e) {
+                window.location.href = '/login';
+            }
+        }
+        checkAuth();
+
+        async function uploadFile(file) {
+            if (uploadInProgress) return;
+            uploadInProgress = true;
+            const form = new FormData();
+            form.append('file', file);
+            try {
+                const res = await fetch('/api/images', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: form
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    showToast('Image uploaded: ' + file.name);
+                    loadImages();
+                } else {
+                    showToast(data.error || 'Upload failed', true);
+                }
+            } catch (e) {
+                showToast('Upload failed', true);
+            } finally {
+                uploadInProgress = false;
+            }
+        }
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            for (const f of files) uploadFile(f);
+        });
+        fileInput.addEventListener('change', () => {
+            for (const f of fileInput.files) uploadFile(f);
+            fileInput.value = '';
+        });
+
+        async function loadImages() {
+            const el = document.getElementById('image-list');
+            try {
+                const res = await fetch('/api/images', { credentials: 'include' });
+                if (res.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await res.json();
+                if (!data.images || data.images.length === 0) {
+                    el.innerHTML = `<div class="empty"><p>No images yet. Upload your first image above.</p></div>`;
+                    return;
+                }
+                el.innerHTML = `<div class="image-grid">` + data.images.map(img => `
+                    <div class="image-card">
+                        <img class="image-thumb" src="${esc(img.url)}" alt="${esc(img.original_name)}">
+                        <div class="image-body">
+                            <div class="image-name" title="${esc(img.original_name)}">${esc(img.original_name)}</div>
+                            <div class="image-meta">${formatSize(img.size)} &middot; ${esc(img.created_at || '')}</div>
+                            <div class="image-actions">
+                                <button class="btn-sm btn-copy" onclick="copyUrl('${esc(img.id)}')">Copy URL</button>
+                                <button class="btn-sm btn-sm-red" onclick="deleteImage('${esc(img.id)}')">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') + `</div>`;
+            } catch (e) {
+                el.innerHTML = `<div class="empty"><p>Failed to load images.</p></div>`;
+            }
+        }
+
+        function copyUrl(id) {
+            const url = window.location.origin + '/api/images/' + id;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(
+                    () => showToast('Image URL copied'),
+                    () => { window.prompt('Copy this image URL:', url); showToast('Image URL copied'); }
+                );
+            } else {
+                window.prompt('Copy this image URL:', url);
+                showToast('Image URL copied');
+            }
+        }
+
+        async function deleteImage(id) {
+            if (!confirm('Delete this image? This cannot be undone.')) return;
+            try {
+                const res = await fetch('/api/images/' + id, { method: 'DELETE', credentials: 'include' });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    showToast('Image deleted');
+                    loadImages();
+                } else {
+                    showToast(data.error || 'Delete failed', true);
+                }
+            } catch (e) {
+                showToast('Delete failed', true);
+            }
+        }
+
+        loadImages();
+    </script>
+</body>
+</html>

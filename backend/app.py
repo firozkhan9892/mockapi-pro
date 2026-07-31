@@ -26,8 +26,12 @@ oauth.register(
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_NAME = BASE_DIR / "mockapi.db"
+UPLOAD_DIR = BASE_DIR / "uploads" / "images"
 
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'gif'}
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
 def init_db():
     conn = sqlite3.connect(DB_NAME, timeout=10)
@@ -64,6 +68,17 @@ def init_db():
                   request_count INTEGER DEFAULT 0,
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                   FOREIGN KEY (api_key_id) REFERENCES api_keys(id))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS images
+                 (id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  filename TEXT NOT NULL,
+                  original_name TEXT NOT NULL,
+                  mime_type TEXT NOT NULL,
+                  size INTEGER NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (user_id) REFERENCES users(id))''')
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     # Safe migrations - add columns if they don't exist
     migrations = [
@@ -495,6 +510,12 @@ def dashboard_page():
         return send_from_directory('../frontend', 'login.html')
     return send_from_directory('../frontend', 'dashboard.html')
 
+@app.route('/images')
+def images_page():
+    if 'user_id' not in session:
+        return send_from_directory('../frontend', 'login.html')
+    return send_from_directory('../frontend', 'images.html')
+
 @app.route('/create')
 def create_page():
     if 'user_id' not in session:
@@ -651,6 +672,199 @@ def mock_response(user_id, endpoint):
     return jsonify(json.loads(result[0])), result[1]
 
 
+# ==================== IMAGE API ====================
+
+def image_requester():
+    """Return (user_id, api_key_id) authenticated via session or API key.
+    Session auth returns (user_id, None); API key auth returns (owner, key_id).
+    Returns (None, None) when unauthenticated."""
+    user_id = get_user_id()
+    if user_id:
+        return user_id, None
+    api_key = request.headers.get('x-api-key') or request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    if not api_key:
+        return None, None
+    key_id, key_owner = validate_api_key(api_key)
+    if not key_id or not is_user_active(key_owner):
+        return None, None
+    return key_owner, key_id
+
+
+def image_usage_check(user_id, key_id):
+    """Enforce daily limit and record usage for API-key-authenticated requests.
+    Session-authenticated (dashboard) requests are not metered.
+    Returns (ok, error_response)."""
+    if not key_id or is_admin_user(user_id):
+        return True, None
+    owner_limit = get_user_daily_limit(user_id)
+    if owner_limit > 0 and get_usage(key_id) >= owner_limit:
+        return False, (jsonify({"error": "Daily request limit reached. Upgrade to Pro."}), 429)
+    increment_usage(key_id)
+    return True, None
+
+
+def image_mime_type(ext):
+    return {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'gif': 'image/gif',
+    }.get(ext, 'application/octet-stream')
+
+
+def validate_image_file(file, filename):
+    """Return normalized extension if the file is a valid image, else None."""
+    ext = Path(filename).suffix.lower().lstrip('.')
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        return None
+    ext = 'jpg' if ext == 'jpeg' else ext
+    header = file.read(16)
+    file.seek(0)
+    if ext == 'jpg':
+        ok = header[:3] == b'\xff\xd8\xff'
+    elif ext == 'png':
+        ok = header[:8] == b'\x89PNG\r\n\x1a\n'
+    elif ext == 'gif':
+        ok = header[:6] in (b'GIF87a', b'GIF89a')
+    elif ext == 'webp':
+        ok = header[:4] == b'RIFF' and header[8:12] == b'WEBP'
+    else:
+        ok = False
+    return ext if ok else None
+
+
+def delete_image_file(conn, image_id, user_id, admin_allowed=True):
+    """Delete an image owned by user_id (or any if admin_allowed and admin).
+    Returns (success, status, payload)."""
+    c = conn.cursor()
+    c.execute("SELECT id, user_id, filename FROM images WHERE id=?", (image_id,))
+    row = c.fetchone()
+    if not row:
+        return False, 404, {"error": "Image not found"}
+    owner = row[1]
+    if owner != user_id and not (admin_allowed and is_admin_user(user_id)):
+        return False, 404, {"error": "Image not found"}
+    try:
+        (UPLOAD_DIR / row[2]).unlink()
+    except OSError:
+        pass
+    c.execute("DELETE FROM images WHERE id=?", (image_id,))
+    conn.commit()
+    return True, 200, {"success": True}
+
+
+@app.route('/api/images', methods=['POST'])
+def upload_image():
+    user_id, key_id = image_requester()
+    if not user_id:
+        return jsonify({"error": "Authentication required. Log in or pass an API key via x-api-key."}), 401
+
+    ok, err = image_usage_check(user_id, key_id)
+    if not ok:
+        return err
+
+    file = request.files.get('file')
+    if not file or not file.filename:
+        return jsonify({"error": "No file provided"}), 400
+
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_IMAGE_SIZE:
+        return jsonify({"error": "File too large. Maximum size is 10MB"}), 413
+
+    ext = validate_image_file(file, file.filename)
+    if not ext:
+        return jsonify({"error": "Invalid image. Allowed types: jpg, jpeg, png, webp, gif"}), 400
+
+    image_id = str(uuid.uuid4())
+    stored_name = f"{image_id}.{ext}"
+    file.save(UPLOAD_DIR / stored_name)
+
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("INSERT INTO images (id, user_id, filename, original_name, mime_type, size) VALUES (?, ?, ?, ?, ?, ?)",
+              (image_id, user_id, stored_name, file.filename, image_mime_type(ext), size))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "id": image_id,
+        "filename": stored_name,
+        "original_name": file.filename,
+        "mime_type": image_mime_type(ext),
+        "size": size,
+        "url": f"/api/images/{image_id}",
+    }), 201
+
+
+@app.route('/api/images', methods=['GET'])
+def list_images():
+    user_id, key_id = image_requester()
+    if not user_id:
+        return jsonify({"error": "Authentication required. Log in or pass an API key via x-api-key."}), 401
+
+    ok, err = image_usage_check(user_id, key_id)
+    if not ok:
+        return err
+
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("SELECT id, filename, original_name, mime_type, size, created_at FROM images WHERE user_id=? ORDER BY created_at DESC",
+              (user_id,))
+    rows = c.fetchall()
+    conn.close()
+    images = [{
+        "id": r[0],
+        "filename": r[1],
+        "original_name": r[2],
+        "mime_type": r[3],
+        "size": r[4],
+        "created_at": r[5],
+        "url": f"/api/images/{r[0]}",
+    } for r in rows]
+    return jsonify({"images": images, "total": len(images)})
+
+
+@app.route('/api/images/<image_id>', methods=['GET'])
+def get_image(image_id):
+    user_id, key_id = image_requester()
+    if not user_id:
+        return jsonify({"error": "Authentication required. Log in or pass an API key via x-api-key."}), 401
+
+    ok, err = image_usage_check(user_id, key_id)
+    if not ok:
+        return err
+
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("SELECT id, user_id, filename, original_name, mime_type, size, created_at FROM images WHERE id=?", (image_id,))
+    row = c.fetchone()
+    conn.close()
+    if not row or (row[1] != user_id and not is_admin_user(user_id)):
+        return jsonify({"error": "Image not found"}), 404
+    if not (UPLOAD_DIR / row[2]).exists():
+        return jsonify({"error": "Image file missing"}), 404
+    return send_from_directory(UPLOAD_DIR, row[2])
+
+
+@app.route('/api/images/<image_id>', methods=['DELETE'])
+def delete_image(image_id):
+    user_id, key_id = image_requester()
+    if not user_id:
+        return jsonify({"error": "Authentication required. Log in or pass an API key via x-api-key."}), 401
+
+    ok, err = image_usage_check(user_id, key_id)
+    if not ok:
+        return err
+
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    success, status, payload = delete_image_file(conn, image_id, user_id, admin_allowed=True)
+    conn.close()
+    return jsonify(payload), status
+
 
 # ==================== ADMIN PANEL ====================
 
@@ -723,6 +937,12 @@ def admin_dashboard_stats():
     c.execute("SELECT COALESCE(SUM(request_count), 0) FROM request_usage")
     requests_lifetime = c.fetchone()[0]
 
+    c.execute("SELECT COUNT(*) FROM images")
+    total_images = c.fetchone()[0]
+
+    c.execute("SELECT COALESCE(SUM(size), 0) FROM images")
+    storage_used = c.fetchone()[0]
+
     conn.close()
 
     return jsonify({
@@ -733,6 +953,8 @@ def admin_dashboard_stats():
         "requests_lifetime": requests_lifetime,
         "admin_users": admin_users,
         "active_users": active_users,
+        "total_images": total_images,
+        "storage_used": storage_used,
     })
 
 
@@ -957,6 +1179,14 @@ def admin_delete_user(user_id):
         c.execute("DELETE FROM api_keys WHERE user_id=?", (user_id,))
         # Delete mock APIs
         c.execute("DELETE FROM mock_apis WHERE user_id=?", (user_id,))
+        # Delete images (and their files)
+        c.execute("SELECT filename FROM images WHERE user_id=?", (user_id,))
+        for (filename,) in c.fetchall():
+            try:
+                (UPLOAD_DIR / filename).unlink()
+            except OSError:
+                pass
+        c.execute("DELETE FROM images WHERE user_id=?", (user_id,))
         # Delete user
         c.execute("DELETE FROM users WHERE id=?", (user_id,))
         conn.commit()
@@ -1082,6 +1312,45 @@ def admin_enable_api(api_id):
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+
+@app.route('/admin/images', methods=['GET'])
+@admin_required
+def admin_list_all_images():
+    search = request.args.get('search', '').strip().lower()
+    query = """SELECT i.id, i.filename, i.original_name, i.mime_type, i.size, i.created_at, u.email
+               FROM images i JOIN users u ON i.user_id = u.id"""
+    params = []
+    if search:
+        query += " WHERE LOWER(u.email) LIKE ? OR LOWER(i.original_name) LIKE ?"
+        params = [f"%{search}%", f"%{search}%"]
+    query += " ORDER BY i.created_at DESC"
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute(query, params)
+    rows = c.fetchall()
+    conn.close()
+    images = [{
+        "id": r[0],
+        "filename": r[1],
+        "original_name": r[2],
+        "mime_type": r[3],
+        "size": r[4],
+        "created_at": r[5],
+        "user_email": r[6],
+        "url": f"/api/images/{r[0]}",
+    } for r in rows]
+    return jsonify({"images": images, "total": len(images)})
+
+
+@app.route('/admin/images/<image_id>', methods=['DELETE'])
+@admin_required
+def admin_delete_image(image_id):
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    success, status, payload = delete_image_file(conn, image_id, get_user_id(), admin_allowed=True)
+    conn.close()
+    return jsonify(payload), status
+
 
 init_db()
 
