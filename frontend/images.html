@@ -3,11 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Manager - MockAPI</title>
+    <title>Images - MockAPI</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        body { background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #21262d; }
+        .logo { font-size: 24px; font-weight: bold; color: #58a6ff; }
+        .logo a { color: #58a6ff; text-decoration: none; }
+        .nav-links a { color: #c9d1d9; text-decoration: none; margin-left: 20px; transition: color 0.3s; }
+        .nav-links a:hover { color: #58a6ff; }
+        .nav-links a.active { color: #58a6ff; }
+
+        .tabs { display: none; }
+
         .drop-zone {
-            border: 2px dashed #ccc;
+            border: 2px dashed #30363d;
             border-radius: 12px;
             padding: 40px 20px;
             text-align: center;
@@ -15,16 +26,12 @@
             margin-bottom: 24px;
             transition: border-color 0.2s, background 0.2s;
             cursor: pointer;
+            background: #161b22;
         }
-        .drop-zone.dragover {
-            border-color: #4a6cf7;
-            background: rgba(74, 108, 247, 0.06);
-            color: #4a6cf7;
-        }
-        .drop-zone input[type="file"] {
-            display: none;
-        }
+        .drop-zone.dragover { border-color: #4a6cf7; background: rgba(74, 108, 247, 0.06); color: #4a6cf7; }
+        .drop-zone input[type="file"] { display: none; }
         .drop-zone p { margin: 6px 0; }
+
         .image-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -32,93 +39,74 @@
             margin-top: 16px;
         }
         .image-card {
-            border: 1px solid #e5e7eb;
+            border: 1px solid #21262d;
             border-radius: 12px;
             overflow: hidden;
-            background: #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            background: #161b22;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
-        .image-thumb {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            display: block;
-            background: #f3f4f6;
-        }
-        .image-body {
-            padding: 12px;
-        }
-        .image-name {
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .image-meta {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 10px;
-        }
-        .image-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .image-actions .btn-sm {
-            flex: 1;
-        }
-        .btn-sm {
-            padding: 6px 10px;
-            font-size: 13px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-copy {
-            background: #eef2ff;
-            color: #4a6cf7;
-        }
+        .image-thumb { width: 100%; height: 150px; object-fit: cover; display: block; background: #0d1117; }
+        .image-body { padding: 12px; }
+        .image-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; }
+        .image-meta { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .image-actions { display: flex; gap: 8px; }
+        .image-actions .btn-sm { flex: 1; }
+        .btn-sm { padding: 6px 10px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-copy { background: #eef2ff; color: #4a6cf7; }
         .btn-copy:hover { background: #e0e7ff; }
-        .btn-sm-red {
-            background: #fee2e2;
-            color: #dc2626;
-        }
+        .btn-sm-red { background: #fee2e2; color: #dc2626; }
         .btn-sm-red:hover { background: #fecaca; }
         .toast {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #111827;
-            color: #fff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 1000;
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #111827; color: #fff; padding: 12px 20px; border-radius: 8px;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 1000;
         }
         .toast.show { opacity: 1; }
         .toast.error { background: #dc2626; }
-        .empty { padding: 40px 20px; text-align: center; }
+        .empty { padding: 40px 20px; text-align: center; color: #8b949e; }
         .image-loading { color: #888; padding: 20px; text-align: center; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .section-header h2 { color: #fff; margin: 0; font-size: 24px; }
+        .usage { color: #8b949e; margin-bottom: 24px; font-size: 14px; }
+        .section-divider { border-top: 1px solid #21262d; margin: 40px 0; }
     </style>
 </head>
 <body>
     <div class="container">
-        <nav>
+        <nav id="nav">
             <div class="logo"><a href="/">MockAPI</a></div>
-            <div class="nav-links" id="nav-links">
-                <a href="/">Home</a>
-            </div>
+            <div class="nav-links" id="nav-links"><a href="/">Home</a></div>
         </nav>
 
-        <div class="dashboard">
-            <div class="section-header">
-                <h2>Image Manager</h2>
-                <button class="btn-primary" onclick="document.getElementById('file-input').click()">+ Upload Image</button>
-            </div>
+        <div class="section-header">
+            <h2>Images</h2>
+        </div>
+        <p class="usage">
+            <span id="usage-banner-text"></span>
+        </p>
+
+        <!--
+        ============================================================
+        AI Image Generator feature has been temporarily disabled in
+        the frontend. The full UI (form + gallery + API calls to
+        /api/v1/images/generate) is preserved below in comments and
+        can be re-enabled by restoring the "tabs" markup and
+        uncommenting the "AI Image Generator" tab section.
+
+        All backend routes, providers, DB tables, and tests remain
+        intact and active — only the frontend entry point is hidden.
+        ============================================================
+        -->
+        <!--
+        <div class="tabs" id="tabs">
+            <div class="tab active" data-tab="upload">Upload Images</div>
+            <div class="tab" data-tab="generate">AI Image Generator</div>
+        </div>
+        -->
+
+        <!-- ===== Upload Images (existing functionality, preserved) ===== -->
+        <div class="tab-panel active" id="tab-upload">
+            <button class="btn-primary" onclick="document.getElementById('file-input').click()">+ Upload Image</button>
             <p class="usage">Upload jpg, jpeg, png, webp or gif. Max 10MB per image.</p>
 
             <div class="drop-zone" id="drop-zone">
@@ -132,6 +120,61 @@
                 <div class="image-loading">Loading...</div>
             </div>
         </div>
+
+        <!-- ===== AI Image Generator tab (DISABLED — see note above) =====
+        <div class="tab-panel" id="tab-generate">
+            <div class="gen-form">
+                <div class="form-group">
+                    <label for="gen-prompt">Prompt *</label>
+                    <textarea id="gen-prompt" placeholder="A photorealistic portrait of a cyberpunk samurai, cinematic lighting, 8k"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group form-inline">
+                        <label for="gen-negative">Negative prompt</label>
+                        <input type="text" id="gen-negative" placeholder="blur, low quality, watermark">
+                    </div>
+                    <div class="form-group form-inline">
+                        <label for="gen-model">Model</label>
+                        <select id="gen-model">
+                            <option value="flux-schnell">Flux.1-schnell</option>
+                            <option value="stable-diffusion-xl">Stable Diffusion XL</option>
+                            <option value="dall-e-3">DALL·E 3</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group form-inline">
+                        <label for="gen-width">Width</label>
+                        <input type="number" id="gen-width" min="64" max="1024" value="1024">
+                    </div>
+                    <div class="form-group form-inline">
+                        <label for="gen-height">Height</label>
+                        <input type="number" id="gen-height" min="64" max="1024" value="1024">
+                    </div>
+                    <div class="form-group form-inline">
+                        <label for="gen-ratio-helper" style="visibility:hidden">ratio</label>
+                        <button class="btn-secondary" id="gen-square" style="padding:10px 14px">1:1</button>
+                    </div>
+                </div>
+
+                <div class="gen-actions">
+                    <button class="btn-primary" id="gen-btn" onclick="generateImage()">
+                        <span id="gen-btn-label">Generate Image</span>
+                        <span id="gen-btn-spinner" style="display:none; margin-left:8px;"><span class="spinner"></span></span>
+                    </button>
+                    <span id="gen-status" style="font-size:13px;color:#8b949e;"></span>
+                </div>
+            </div>
+
+            <div class="gen-result" id="gen-result">
+                <div class="gen-placeholder" id="gen-placeholder">
+                    <p>Your generated image will appear here.</p>
+                </div>
+            </div>
+        </div>
+        -->
     </div>
 
     <div id="toast" class="toast"></div>
@@ -146,15 +189,15 @@
             setTimeout(() => t.className = 'toast', 3000);
         }
 
+        function esc(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         function formatSize(bytes) {
             if (bytes < 1024) return bytes + ' B';
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
             return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
-
-        function esc(s) {
-            if (s === null || s === undefined) return '';
-            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         async function checkAuth() {
@@ -174,6 +217,7 @@
                         ${adminLink}
                         <a href="/logout">Logout</a>
                     `;
+                    loadUsageBanner();
                 } else {
                     window.location.href = '/login';
                 }
@@ -181,7 +225,39 @@
                 window.location.href = '/login';
             }
         }
-        checkAuth();
+
+        async function loadUsageBanner() {
+            try {
+                const res = await fetch('/api/usage', { credentials: 'include' });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.unlimited) {
+                    document.getElementById('usage-banner-text').textContent =
+                        data.is_admin ? 'Admin account — unlimited requests' : 'Unlimited requests';
+                } else if (data.remaining !== undefined) {
+                    document.getElementById('usage-banner-text').textContent =
+                        `Today: ${data.today}/${data.limit} used, ${data.remaining} remaining`;
+                }
+            } catch (e) {}
+        }
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        if (dropZone) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('dragover');
+                for (const f of e.dataTransfer.files) uploadFile(f);
+            });
+        }
+        if (fileInput) {
+            fileInput.addEventListener('change', () => {
+                for (const f of fileInput.files) uploadFile(f);
+                fileInput.value = '';
+            });
+        }
 
         async function uploadFile(file) {
             if (uploadInProgress) return;
@@ -189,53 +265,20 @@
             const form = new FormData();
             form.append('file', file);
             try {
-                const res = await fetch('/api/images', {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: form
-                });
+                const res = await fetch('/api/images', { method: 'POST', credentials: 'include', body: form });
                 const data = await res.json().catch(() => ({}));
-                if (res.ok) {
-                    showToast('Image uploaded: ' + file.name);
-                    loadImages();
-                } else {
-                    showToast(data.error || 'Upload failed', true);
-                }
-            } catch (e) {
-                showToast('Upload failed', true);
-            } finally {
-                uploadInProgress = false;
-            }
+                if (res.ok) { showToast('Image uploaded: ' + file.name); loadImages(); }
+                else { showToast(data.error || 'Upload failed', true); }
+            } catch (e) { showToast('Upload failed', true); }
+            finally { uploadInProgress = false; }
         }
-
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            for (const f of files) uploadFile(f);
-        });
-        fileInput.addEventListener('change', () => {
-            for (const f of fileInput.files) uploadFile(f);
-            fileInput.value = '';
-        });
 
         async function loadImages() {
             const el = document.getElementById('image-list');
+            if (!el) return;
             try {
                 const res = await fetch('/api/images', { credentials: 'include' });
-                if (res.status === 401) {
-                    window.location.href = '/login';
-                    return;
-                }
+                if (res.status === 401) { window.location.href = '/login'; return; }
                 const data = await res.json();
                 if (!data.images || data.images.length === 0) {
                     el.innerHTML = `<div class="empty"><p>No images yet. Upload your first image above.</p></div>`;
@@ -243,9 +286,9 @@
                 }
                 el.innerHTML = `<div class="image-grid">` + data.images.map(img => `
                     <div class="image-card">
-                        <img class="image-thumb" src="${esc(img.url)}" alt="${esc(img.original_name)}">
+                        <img class="image-thumb" src="${esc(img.url)}" alt="${esc(img.original_name || img.filename)}">
                         <div class="image-body">
-                            <div class="image-name" title="${esc(img.original_name)}">${esc(img.original_name)}</div>
+                            <div class="image-name" title="${esc(img.original_name || img.filename)}">${esc(img.original_name || img.filename)}</div>
                             <div class="image-meta">${formatSize(img.size)} &middot; ${esc(img.created_at || '')}</div>
                             <div class="image-actions">
                                 <button class="btn-sm btn-copy" onclick="copyUrl('${esc(img.id)}')">Copy URL</button>
@@ -277,17 +320,12 @@
             try {
                 const res = await fetch('/api/images/' + id, { method: 'DELETE', credentials: 'include' });
                 const data = await res.json().catch(() => ({}));
-                if (res.ok) {
-                    showToast('Image deleted');
-                    loadImages();
-                } else {
-                    showToast(data.error || 'Delete failed', true);
-                }
-            } catch (e) {
-                showToast('Delete failed', true);
-            }
+                if (res.ok) { showToast('Image deleted'); loadImages(); }
+                else { showToast(data.error || 'Delete failed', true); }
+            } catch (e) { showToast('Delete failed', true); }
         }
 
+        checkAuth();
         loadImages();
     </script>
 </body>

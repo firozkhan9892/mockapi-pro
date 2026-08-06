@@ -87,6 +87,11 @@
 
     <script>
         let newKeyValue = '';
+        const fullKeys = {};
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
 
         async function checkAuth() {
             try {
@@ -176,21 +181,29 @@
             data.keys.forEach(key => {
                 const created = new Date(key.created_at).toLocaleDateString();
                 const lastUsed = key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never';
+                const masked = key.key_preview.replace(/\*/g, '•');
+                const name = key.name ? esc(key.name) : '';
+                const hasFull = !!fullKeys[key.id];
                 html += `
-                    <div class="api-card">
-                        <div class="key-info">
-                            <div class="key-main">
-                                <code class="key-preview">${key.key_preview}</code>
-                                ${key.name ? '<span class="key-name-tag">' + key.name + '</span>' : ''}
-                            </div>
-                            <div class="key-meta">
-                                <span>Created: ${created}</span>
-                                <span>Last used: ${lastUsed}</span>
+                    <div class="key-card">
+                        <div class="key-card-head">
+                            <span class="key-name-tag">${name || 'API Key'}</span>
+                            <div class="key-card-actions">
+                                <button class="btn-key btn-show" id="show-${key.id}" onclick="toggleShow('${key.id}')"${hasFull ? '' : ' disabled'}>👁 Show</button>
+                                <button class="btn-key btn-copy-key" id="copy-${key.id}" onclick="copyKey('${key.id}')"${hasFull ? '' : ' disabled'}>📋 Copy</button>
                             </div>
                         </div>
-                        <div class="api-actions">
-                            <button onclick="regenerateKey('${key.id}')" class="btn-regen">Regenerate</button>
-                            <button onclick="deleteKey('${key.id}')" class="btn-delete">Delete</button>
+                        <div class="key-preview-row">
+                            <code class="key-preview" id="preview-${key.id}">${masked}</code>
+                            ${hasFull ? '' : '<span class="key-once-hint">Full key shown only once — create or regenerate to copy.</span>'}
+                        </div>
+                        <div class="key-meta">
+                            <span>🕐 Created: ${created}</span>
+                            <span>⚡ Last used: ${lastUsed}</span>
+                        </div>
+                        <div class="key-card-foot">
+                            <button onclick="regenerateKey('${key.id}')" class="btn-regen">🟡 Regenerate</button>
+                            <button onclick="deleteKey('${key.id}')" class="btn-delete">🔴 Delete</button>
                         </div>
                     </div>
                 `;
@@ -219,6 +232,7 @@
             const data = await res.json();
             if (data.success) {
                 newKeyValue = data.key;
+                fullKeys[data.id] = data.key;
                 document.getElementById('new-key-value').textContent = data.key;
                 document.getElementById('modal-title').textContent = 'New API Key';
                 document.getElementById('key-modal').classList.remove('hidden');
@@ -241,6 +255,7 @@
             const data = await res.json();
             if (data.success) {
                 newKeyValue = data.key;
+                fullKeys[data.id] = data.key;
                 document.getElementById('new-key-value').textContent = data.key;
                 document.getElementById('modal-title').textContent = 'Key Regenerated';
                 document.getElementById('key-modal').classList.remove('hidden');
@@ -248,10 +263,50 @@
             }
         }
 
+        function toggleShow(keyId) {
+            const preview = document.getElementById('preview-' + keyId);
+            const showBtn = document.getElementById('show-' + keyId);
+            if (!preview || !showBtn) return;
+            if (preview.classList.contains('revealed')) {
+                preview.textContent = preview.dataset.masked;
+                preview.classList.remove('revealed');
+                showBtn.textContent = '👁 Show';
+            } else {
+                preview.dataset.masked = preview.textContent;
+                preview.textContent = fullKeys[keyId] || preview.textContent;
+                preview.classList.add('revealed');
+                showBtn.textContent = '🙈 Hide';
+            }
+        }
+
+        async function copyKey(keyId) {
+            const full = fullKeys[keyId];
+            const copyBtn = document.getElementById('copy-' + keyId);
+            if (!full) return;
+            try {
+                await navigator.clipboard.writeText(full);
+            } catch (e) {
+                const ta = document.createElement('textarea');
+                ta.value = full;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+            }
+            if (copyBtn) {
+                copyBtn.textContent = '✔ Copied';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            }
+        }
+
         function copyNewKey() {
             navigator.clipboard.writeText(newKeyValue);
             const btn = document.querySelector('.btn-copy');
-            btn.textContent = 'Copied!';
+            btn.textContent = '✔ Copied';
             setTimeout(() => btn.textContent = 'Copy', 2000);
         }
 

@@ -1,6 +1,6 @@
-flask
-flask-cors
-authlib
-requests
-gunicorn
-python-dotenv
+flask==3.1.3
+flask-cors==6.0.2
+authlib==1.7.2
+requests==2.34.2
+gunicorn==26.0.0
+python-dotenv==1.2.2

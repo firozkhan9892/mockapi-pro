@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables & secrets
+.env
+.env.*
+backend/.env
+backend/.secret_key
+
+# Database (SQLite created at runtime)
+*.db
+*.sqlite
+*.sqlite3
+
+# Runtime data (created at runtime)
+backend/uploads/
+backend/storage/
+storage/
+uploads/
+
+# Logs
+*.log
+backend/*.log
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/

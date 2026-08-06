@@ -9,10 +9,47 @@ import uuid
 import os
 import hashlib
 import secrets
+import logging
 from pathlib import Path
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-app.secret_key = os.environ.get('SECRET_KEY', 'mockapi-secret-key-change-in-production')
+
+BASE_DIR = Path(__file__).resolve().parent
+_database_path = os.environ.get("DATABASE_PATH", "").strip()
+DB_NAME = Path(_database_path) if _database_path else BASE_DIR / "mockapi.db"
+_upload_dir = os.environ.get("UPLOAD_DIR", "").strip()
+UPLOAD_DIR = Path(_upload_dir) if _upload_dir else BASE_DIR / "uploads" / "images"
+
+# Prefer a stable SECRET_KEY from the environment. If none is set (or the
+# well-known placeholder is left in place) persist an auto-generated key next
+# to the database so all workers and restarts share the same session secret.
+# The file lives beside the DB (i.e. on the same persistent volume), so a
+# Railway/container restart does not log every user out.
+_secret_key = os.environ.get('SECRET_KEY', '').strip()
+if not _secret_key or _secret_key == 'mockapi-secret-key-change-in-production':
+    try:
+        _secret_file = DB_NAME.parent / ".secret_key"
+        if _secret_file.exists():
+            _secret_key = _secret_file.read_text(encoding="utf-8").strip()
+        if not _secret_key:
+            DB_NAME.parent.mkdir(parents=True, exist_ok=True)
+            _secret_key = secrets.token_hex(32)
+            _secret_file.write_text(_secret_key, encoding="utf-8")
+            print("[CONFIG] SECRET_KEY not set: generated and persisted to "
+                  f"{_secret_file}. Set SECRET_KEY in production for best practice.")
+    except OSError:
+        pass
+if not _secret_key:
+    _secret_key = secrets.token_hex(32)
+    print("[CONFIG] SECRET_KEY not set and could not be persisted; using an "
+          "ephemeral random secret. Set a stable SECRET_KEY in production.")
+app.secret_key = _secret_key
+
+# Safety ceiling on request body size to mitigate denial-of-service via huge
+# payloads. The image-upload endpoint enforces a tighter 10MB limit itself;
+# 11MB leaves headroom for multipart encoding so legitimate uploads are unaffected.
+app.config['MAX_CONTENT_LENGTH'] = 11 * 1024 * 1024
+
 CORS(app, supports_credentials=True)
 
 oauth = OAuth(app)
@@ -24,16 +61,13 @@ oauth.register(
     client_kwargs={'scope': 'openid email profile'},
 )
 
-BASE_DIR = Path(__file__).resolve().parent
-DB_NAME = BASE_DIR / "mockapi.db"
-UPLOAD_DIR = BASE_DIR / "uploads" / "images"
-
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "").strip().lower()
 
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'gif'}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
 def init_db():
+    os.makedirs(DB_NAME.parent, exist_ok=True)
     conn = sqlite3.connect(DB_NAME, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
@@ -99,6 +133,12 @@ def init_db():
         c.execute("UPDATE users SET role='free' WHERE role IS NULL")
     except sqlite3.OperationalError:
         pass
+
+    # Migration: dedupe mock_apis so only one row exists per (user_id, endpoint, method)
+    c.execute('''DELETE FROM mock_apis
+                 WHERE id NOT IN (SELECT MIN(id) FROM mock_apis GROUP BY user_id, endpoint, method)''')
+    # Enforce uniqueness going forward; prevents duplicate method registrations
+    c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_mock_apis_unique ON mock_apis (user_id, endpoint, method)')
 
     conn.commit()
     conn.close()
@@ -559,9 +599,13 @@ def create_mock_api():
     except:
         conn.close()
         return jsonify({"error": "Invalid JSON response"}), 400
-    c.execute("INSERT INTO mock_apis (user_id, endpoint, method, response, status_code) VALUES (?, ?, ?, ?, ?)",
+    c.execute("""INSERT INTO mock_apis (user_id, endpoint, method, response, status_code)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON CONFLICT(user_id, endpoint, method)
+                 DO UPDATE SET response=excluded.response, status_code=excluded.status_code""",
               (user_id, endpoint, method, response, status_code))
-    api_id = c.lastrowid
+    c.execute("SELECT id FROM mock_apis WHERE user_id=? AND endpoint=? AND method=?", (user_id, endpoint, method))
+    api_id = c.fetchone()[0]
     conn.commit()
     conn.close()
     api_url = f"{request.host_url}mock/{user_id}{endpoint}"
@@ -661,7 +705,7 @@ def mock_response(user_id, endpoint):
               (user_id, endpoint, method))
     result = c.fetchone()
     if result is None:
-        c.execute("SELECT method FROM mock_apis WHERE user_id=? AND endpoint=?", (user_id, endpoint))
+        c.execute("SELECT DISTINCT method FROM mock_apis WHERE user_id=? AND endpoint=? ORDER BY method", (user_id, endpoint))
         existing = c.fetchall()
         conn.close()
         if existing:
@@ -1352,7 +1396,17 @@ def admin_delete_image(image_id):
     return jsonify(payload), status
 
 
+@app.errorhandler(500)
+def handle_internal_error(exc):
+    logging.getLogger(__name__).exception("Unhandled server error")
+    return jsonify({"error": "Internal server error"}), 500
+
+
 init_db()
+
+from images import images_bp, models as image_models
+image_models.init_image_table()
+app.register_blueprint(images_bp)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

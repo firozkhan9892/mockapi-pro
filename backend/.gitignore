@@ -8,6 +8,7 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+.secret_key
 
 # Virtual Environment
 .venv/
@@ -21,6 +22,9 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Logs
+*.log
 
 # IDE
 .vscode/
