@@ -68,6 +68,7 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
 def init_db():
     os.makedirs(DB_NAME.parent, exist_ok=True)
+    os.makedirs(UPLOAD_DIR.parent, exist_ok=True)
     conn = sqlite3.connect(DB_NAME, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
