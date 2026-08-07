@@ -94,6 +94,45 @@ Authorization: Bearer mk_live_your_api_key_here</pre>
                     </div>
                 </section>
 
+                <section id="create-rest-mock">
+                    <h2>Create REST API Mock</h2>
+                    <p>One resource handles all HTTP methods: <strong>GET</strong> (list), <strong>POST</strong> (create), <strong>PUT</strong> (update <code>/id</code>), <strong>DELETE</strong> (remove <code>/id</code>). Requires session authentication.</p>
+
+                    <div class="endpoint-box">
+                        <span class="method-badge post">POST</span>
+                        <code>/api/rest/create</code>
+                    </div>
+
+                    <h4>Request Body</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>JSON</span>
+                            <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre>{
+    "name": "Users API",
+    "endpoint": "/users"
+}</pre>
+                    </div>
+
+                    <h4>Response (200)</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>JSON</span>
+                            <button class="btn-copy-docs" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre>{
+    "success": true,
+    "rest_id": "rm_abc123",
+    "name": "Users API",
+    "endpoint": "/users",
+    "status_code": 200
+}</pre>
+                    </div>
+
+                    <p>Mock URL base: <code>GET /mock/{user_id}/users</code> — use one API key for all methods. Records are created with <code>POST</code> and referenced by returned <code>id</code> for <code>GET /id</code>, <code>PUT /id</code>, and <code>DELETE /id</code>.</p>
+                </section>
+
                 <section id="create-mock">
                     <h2>Create Mock API</h2>
                     <p>Use this endpoint to create a new mock API. Requires session authentication (logged in via dashboard).</p>

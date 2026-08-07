@@ -87,6 +87,21 @@ def init_db():
                   response TEXT,
                   status_code INTEGER,
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS rest_mocks
+                 (id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  name TEXT NOT NULL,
+                  endpoint TEXT NOT NULL,
+                  status_code INTEGER DEFAULT 200,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (user_id) REFERENCES users(id))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS rest_records
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  mock_id TEXT NOT NULL,
+                  data TEXT NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (mock_id) REFERENCES rest_mocks(id))''')
     c.execute('''CREATE TABLE IF NOT EXISTS api_keys
                  (id TEXT PRIMARY KEY,
                   user_id TEXT NOT NULL,
@@ -140,6 +155,8 @@ def init_db():
                  WHERE id NOT IN (SELECT MIN(id) FROM mock_apis GROUP BY user_id, endpoint, method)''')
     # Enforce uniqueness going forward; prevents duplicate method registrations
     c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_mock_apis_unique ON mock_apis (user_id, endpoint, method)')
+    # Enforce one REST mock per (user_id, endpoint)
+    c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_rest_mocks_unique ON rest_mocks (user_id, endpoint)')
 
     conn.commit()
     conn.close()
@@ -649,6 +666,94 @@ def delete_api(api_id):
         return jsonify({"success": True})
     return jsonify({"error": "API not found"}), 404
 
+def _gen_rest_id():
+    return f"rm_{uuid.uuid4().hex}"
+
+def _rest_count_for_user(user_id):
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM rest_mocks WHERE user_id=?", (user_id,))
+    n = c.fetchone()[0]
+    conn.close()
+    return n
+
+@app.route('/api/rest/create', methods=['POST'])
+@login_required
+def create_rest_mock():
+    user_id = get_user_id()
+    if not is_admin_user(user_id):
+        if _rest_count_for_user(user_id) >= 5:
+            return jsonify({"error": "Free limit reached (5 REST APIs per user)"}), 429
+    data = request.json or {}
+    name = (data.get('name') or '').strip()
+    endpoint = (data.get('endpoint') or '').strip()
+    status_code = data.get('status_code', 200)
+    if not name:
+        return jsonify({"error": "Name is required"}), 400
+    if not endpoint:
+        return jsonify({"error": "Endpoint is required"}), 400
+    if not endpoint.startswith('/'):
+        endpoint = '/' + endpoint
+    mock_id = _gen_rest_id()
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO rest_mocks (id, user_id, name, endpoint, status_code) VALUES (?, ?, ?, ?, ?)",
+                  (mock_id, user_id, name, endpoint, status_code))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"error": f"REST mock for {endpoint} already exists"}), 409
+    conn.close()
+    return jsonify({"success": True, "rest_id": mock_id, "name": name, "endpoint": endpoint, "status_code": status_code})
+
+@app.route('/api/rest/list')
+@login_required
+def list_rest_mocks():
+    user_id = get_user_id()
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("SELECT id, name, endpoint, status_code FROM rest_mocks WHERE user_id=? ORDER BY created_at", (user_id,))
+    mocks = c.fetchall()
+    result = []
+    for m in mocks:
+        c.execute("SELECT COUNT(*) FROM rest_records WHERE mock_id=?", (m[0],))
+        rec_count = c.fetchone()[0]
+        result.append({"rest_id": m[0], "name": m[1], "endpoint": m[2], "status_code": m[3], "records": rec_count})
+    conn.close()
+    return jsonify({"rest_apis": result, "total": len(result), "limit": 5})
+
+@app.route('/api/rest/delete/<rest_id>', methods=['DELETE'])
+@login_required
+def delete_rest_mock(rest_id):
+    user_id = get_user_id()
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("DELETE FROM rest_records WHERE mock_id=? AND mock_id IN (SELECT id FROM rest_mocks WHERE id=? AND user_id=?)",
+              (rest_id, rest_id, user_id))
+    c.execute("DELETE FROM rest_mocks WHERE id=? AND user_id=?", (rest_id, user_id))
+    deleted = c.rowcount
+    conn.commit()
+    conn.close()
+    if deleted:
+        return jsonify({"success": True})
+    return jsonify({"error": "REST API not found"}), 404
+
+@app.route('/api/rest/records/<rest_id>', methods=['GET'])
+@login_required
+def list_rest_records(rest_id):
+    user_id = get_user_id()
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+    c.execute("SELECT id FROM rest_mocks WHERE id=? AND user_id=?", (rest_id, user_id))
+    if not c.fetchone():
+        conn.close()
+        return jsonify({"error": "REST API not found"}), 404
+    c.execute("SELECT id, data FROM rest_records WHERE mock_id=? ORDER BY id", (rest_id,))
+    records = [{"id": r[0], "data": json.loads(r[1])} for r in c.fetchall()]
+    conn.close()
+    return jsonify({"records": records, "total": len(records)})
+
 @app.route('/api/usage', methods=['GET'])
 @login_required
 def get_usage_summary():
@@ -699,22 +804,112 @@ def mock_response(user_id, endpoint):
         increment_usage(key_id)
 
     method = request.method
-    endpoint = '/' + endpoint
+    full_path = '/' + endpoint
     conn = sqlite3.connect(DB_NAME, timeout=10)
     c = conn.cursor()
+
+    # --- REST Mock dispatch (stateful) ---
+    c.execute("SELECT id, endpoint, status_code FROM rest_mocks WHERE user_id=? ORDER BY endpoint", (user_id,))
+    rest_hits = []
+    for rid, r_ep, r_sc in c.fetchall():
+        if full_path == r_ep:
+            rest_hits.append((rid, r_ep, r_sc, None))
+        elif full_path.startswith(r_ep + '/'):
+            rest_hits.append((rid, r_ep, r_sc, full_path[len(r_ep) + 1:]))
+    if rest_hits:
+        rest_hits.sort(key=lambda x: len(x[1]), reverse=True)
+        rest_id, rest_ep, rest_sc, rest_key = rest_hits[0]
+        conn.close()
+        return _rest_execute(user_id, key_owner, rest_id, rest_ep, rest_sc, rest_key, method)
+
     c.execute("SELECT response, status_code FROM mock_apis WHERE user_id=? AND endpoint=? AND method=?",
-              (user_id, endpoint, method))
+              (user_id, full_path, method))
     result = c.fetchone()
     if result is None:
-        c.execute("SELECT DISTINCT method FROM mock_apis WHERE user_id=? AND endpoint=? ORDER BY method", (user_id, endpoint))
+        c.execute("SELECT DISTINCT method FROM mock_apis WHERE user_id=? AND endpoint=? ORDER BY method", (user_id, full_path))
         existing = c.fetchall()
         conn.close()
         if existing:
             methods = [m[0] for m in existing]
-            return jsonify({"error": f"{method} mock for {endpoint} has not been created. Available methods: {', '.join(methods)}"}), 404
-        return jsonify({"error": f"Mock for {endpoint} has not been created"}), 404
+            return jsonify({"error": f"{method} mock for {full_path} has not been created. Available methods: {', '.join(methods)}"}), 404
+        return jsonify({"error": f"Mock for {full_path} has not been created"}), 404
     conn.close()
     return jsonify(json.loads(result[0])), result[1]
+
+
+def _rest_execute(user_id, key_owner, rest_id, rest_ep, rest_sc, rest_key, method):
+    """Execute a stateful REST mock operation.
+
+    rest_key is None for the base resource path; otherwise it is the record id.
+    GET  <ep>          -> list all records
+    GET  <ep>/<id>     -> return one record
+    POST <ep>          -> create a record from the JSON body
+    PUT  <ep>/<id>     -> replace a record from the JSON body
+    DELETE <ep>/<id>   -> delete one record
+    DELETE <ep>        -> delete all records for the resource
+    """
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    c = conn.cursor()
+
+    if method in ('PUT', 'DELETE') and rest_key is None:
+        conn.close()
+        return jsonify({"error": f"{method} on {rest_ep} requires a record id, e.g. {rest_ep}/{{id}}"}), 400
+
+    # Resolve payload for POST/PUT
+    payload = None
+    if method in ('POST', 'PUT'):
+        try:
+            payload = request.get_json(silent=True)
+        except Exception:
+            payload = None
+        if payload is None:
+            conn.close()
+            return jsonify({"error": "Request body must be valid JSON"}), 400
+        if not isinstance(payload, (dict, list)):
+            conn.close()
+            return jsonify({"error": "Request body must be a JSON object or array"}), 400
+
+    if method == 'GET':
+        if rest_key is None:
+            c.execute("SELECT id, data FROM rest_records WHERE mock_id=? ORDER BY id", (rest_id,))
+            records = [json.loads(r[1]) for r in c.fetchall()]
+            conn.close()
+            return jsonify(records), 200
+        c.execute("SELECT data FROM rest_records WHERE mock_id=? AND id=?", (rest_id, int(rest_key)))
+        row = c.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"error": f"Record {rest_key} not found"}), 404
+        return jsonify(json.loads(row[0])), 200
+
+    if method == 'POST':
+        c.execute("INSERT INTO rest_records (mock_id, data) VALUES (?, ?)", (rest_id, json.dumps(payload)))
+        new_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return jsonify({"id": new_id, "data": payload}), 201
+
+    if method == 'PUT':
+        c.execute("UPDATE rest_records SET data=?, updated_at=CURRENT_TIMESTAMP WHERE mock_id=? AND id=?",
+                  (json.dumps(payload), rest_id, int(rest_key)))
+        updated = c.rowcount
+        conn.commit()
+        conn.close()
+        if not updated:
+            return jsonify({"error": f"Record {rest_key} not found"}), 404
+        return jsonify({"id": int(rest_key), "data": payload}), 200
+
+    if method == 'DELETE':
+        c.execute("DELETE FROM rest_records WHERE mock_id=? AND id=?", (rest_id, int(rest_key)))
+        deleted = c.rowcount
+        conn.commit()
+        conn.close()
+        if not deleted:
+            return jsonify({"error": f"Record {rest_key} not found"}), 404
+        return jsonify({"success": True, "deleted_id": int(rest_key)}), 200
+
+    conn.close()
+    return jsonify({"error": f"Method {method} not supported for this REST mock"}), 405
 
 
 # ==================== IMAGE API ====================

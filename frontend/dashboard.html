@@ -18,6 +18,14 @@
         <div id="usage-banner" class="usage-banner hidden"></div>
 
         <div class="dashboard">
+            <h2>REST API Mocks</h2>
+            <p class="usage">Used: <span id="used_rest">0</span>/5 REST APIs</p>
+            <div id="rest_list" class="api-list">
+                <p>Loading...</p>
+            </div>
+
+            <div class="section-divider"></div>
+
             <h2>Your Mock APIs</h2>
             <p class="usage">Used: <span id="used">0</span>/5 APIs</p>
             <div id="api_list" class="api-list">
@@ -160,6 +168,52 @@
             if (!confirm('Delete this API method?')) return;
             await fetch('/api/delete/' + id, { method: 'DELETE', credentials: 'include' });
             loadApis();
+        }
+
+        async function loadRestApis() {
+            const res = await fetch('/api/rest/list', { credentials: 'include' });
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+            const data = await res.json();
+            document.getElementById('used_rest').textContent = data.total;
+            if (data.total === 0) {
+                document.getElementById('rest_list').innerHTML = `
+                    <div class="empty">
+                        <p>No REST API mocks yet.</p>
+                        <a href="/create" class="btn-primary">Create Your First REST API</a>
+                    </div>
+                `;
+                return;
+            }
+            let html = '';
+            data.rest_apis.forEach(rest => {
+                html += `
+                    <div class="api-card">
+                        <div class="api-info">
+                            <span class="method rest">REST</span>
+                            <span class="endpoint"><strong>${esc(rest.name)}</strong> ${rest.endpoint}</span>
+                            <span class="status-code">GET/POST/PUT/DELETE</span>
+                            <span class="record-count">${rest.records} record(s)</span>
+                        </div>
+                        <div class="api-actions">
+                            <button onclick="deleteRestApi('${rest.rest_id}')" class="btn-delete">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('rest_list').innerHTML = html;
+        }
+
+        async function deleteRestApi(rest_id) {
+            if (!confirm('Delete this REST API mock and all its records?')) return;
+            await fetch('/api/rest/delete/' + rest_id, { method: 'DELETE', credentials: 'include' });
+            loadRestApis();
+        }
+
+        function esc(s) {
+            return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         async function loadKeys() {
@@ -352,6 +406,7 @@
         }
 
         loadApis();
+        loadRestApis();
         loadKeys();
         loadUsage();
     </script>
